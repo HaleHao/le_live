@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css"  media="all">
+  <link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css" media="all" />
+  <link rel="stylesheet" href="__CSS__/admin.css"  media="all">
+</head>
+<style>
+  .input-group .form-control, .input-group-addon, .input-group-btn {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -webkit-box-pack: center;
+    -webkit-justify-content: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+  }
+
+  .file-item-delete {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #ff4544;
+    color: #fff;
+    width: 1.25rem;
+    height: 1.25rem;
+    line-height: 1.1rem;
+    text-align: center;
+    border-radius: 0 2px 0 2px;
+    cursor: pointer;
+    opacity: .25;
+    border: 1px solid #ee4140;
+    z-index: 2;
+  }
+   .file-item-delete:hover {
+    opacity: 1;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+  }
+</style>
+<body id="body">
+  <div class="tplay-body-div">
+    <div class="layui-tab">
+      <ul class="layui-tab-title">
+        <ul class="layui-tab-title">
+          <li><a href="{:url('admin/column/index')}" class="a_menu"><i class="fa fa-list"></i> 栏目管理</a></li>
+          <li class="layui-this"><i class="fa fa-plus"></i> 新增栏目</li>
+        </ul>
+      </ul>
+    </div> 
+    <div style="margin-top: 20px;">
+    </div>
+    <form class="layui-form" id="admin">
+
+      <div class="layui-form-item">
+        <label class="layui-form-label required">标题</label>
+        <div class="layui-input-block" style="max-width:600px;">
+          <input name="title" lay-verify="required" autocomplete="off" placeholder="请输入标题" class="layui-input" type="text">
+        </div>
+      </div>
+
+      <div class="layui-form-item">
+        <label class="layui-form-label">排序</label>
+        <div class="layui-input-block" style="max-width:200px;">
+          <input name="sort" autocomplete="off" placeholder="请输入排序" class="layui-input" value="1" type="number">
+        </div>
+      </div>
+
+      <div class="layui-form-item">
+        <label class="layui-form-label required">图片</label>
+        <div class="layui-input-block" style="max-width:600px;">
+          <input name="image" readonly="readonly" lay-verify="required" autocomplete="off" style="margin-right: 0px;" class="layui-input layui-input-inline image" type="text">
+          <button type="button" class="layui-btn layui-btn-primary" id="thumb"><i class="fa fa-cloud-upload"></i></button>
+          <div class="upload-preview" style="position: relative;width: 80px;height: 80px;margin: 5px 0;">
+          <img class="layui-upload-img" style="" id="demo1" width="80" height="80">
+            <span class="file-item-delete">×</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="layui-form-item">
+        <div class="layui-input-block">
+          <button class="layui-btn" lay-submit lay-filter="admin">立即提交</button>
+          <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+        </div>
+      </div>
+    </form>
+
+
+    <script src="__PUBLIC__/layui/layui.js"></script>
+    <script src="__PUBLIC__/jquery/jquery.min.js"></script>
+
+    <!-- <script>
+        var message;
+        layui.config({
+            base: '__JS__/',
+            version: '1.0.1'
+        }).use(['app', 'message'], function() {
+            var app = layui.app,
+                $ = layui.jquery,
+                layer = layui.layer;
+            //将message设置为全局以便子页面调用
+            message = layui.message;
+            //主入口
+            app.set({
+                type: 'iframe'
+            }).init();
+        });
+    </script> -->
+
+    <script>
+    layui.use('upload', function(){
+      var upload = layui.upload;
+      //执行实例
+      var uploadInst = upload.render({
+        elem: '#thumb' //绑定元素
+        ,url: "{:url('common/upload')}" //上传接口
+        ,data:{use:'banner_image'}
+        ,done: function(res){
+          //上传完毕回调
+          if(res.code == 2) {
+            $('#demo1').attr('src',res.src);
+            $('.image').val(res.src);
+            // $('#upload-thumb').append('<input type="hidden" name="thumb" value="'+ res.id +'">');
+          } else {
+            layer.msg(res.msg);
+          }
+        }
+        ,error: function(){
+          //请求异常回调
+          //演示失败状态，并实现重传
+          var demoText = $('#demoText');
+          demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
+          demoText.find('.demo-reload').on('click', function(){
+            uploadInst.upload();
+          });
+        }
+      });
+    });
+    </script>
+
+    <script>
+        $('.file-item-delete').click(function () {
+            $('#demo1').removeAttr('src');
+            $('.image').val('');
+        })
+    </script>
+
+    <script>
+      layui.use(['layer', 'form'], function() {
+          var layer = layui.layer,
+              $ = layui.jquery,
+              form = layui.form;
+          $(window).on('load', function() {
+              form.on('submit(admin)', function(data) {
+                  $.ajax({
+                      url:"{:url('admin/column/save')}",
+                      data:$('#admin').serialize(),
+                      type:'post',
+                      async: false,
+                      success:function(res) {
+                          if(res.code == 1) {
+                                layer.alert(res.msg, function(index){
+                                  location.href = res.url;
+                              })
+                          } else {
+                              layer.msg(res.msg);
+                          }
+                      }
+                  })
+                  return false;
+              });
+          });
+      });
+    </script>
+
+  </div>
+</body>
+</html>
