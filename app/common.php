@@ -91,7 +91,7 @@ function JsonSuccess($data=[],$msg="成功",$code=200)
  * @param int $cde
  * Date: 2019/9/16 0016
  */
-function JsonError($msg='',$code=20001,$data=[])
+function JsonError($msg='失败',$code=20001,$data=[])
 {
     $json = [
         'data' => $data,
@@ -150,6 +150,19 @@ function GetDistance($from, $to, $km = true, $decimal = 2)
     }
     return round($distance, $decimal);
 }
+
+
+/**
+ * 获取订单号
+ * @return string
+ * Date: 2019/9/23 0023
+ */
+function GetOrderNo()
+{
+    $order_no = date('YmdHis') . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
+    return $order_no;
+}
+
 
 /**
  * 树状数组

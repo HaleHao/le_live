@@ -1,51 +1,59 @@
 <?php
 /**
  * Created by PhpStorm.
- * User: EDZ
+ * User: 何浩
  * Date: 2018/10/25
  * Time: 11:37
  */
 
-namespace App\Service;
+namespace app\api\service;
 
 
-use Illuminate\Support\Facades\Log;
 
 class WeChatPayService
 {
     //统一下单接口
     protected $unifiedorderUrl = 'https://api.mch.weixin.qq.com/pay/unifiedorder';
-
+    //退款接口
     protected $refundUrl = 'https://api.mch.weixin.qq.com/secapi/pay/refund';
-
-
-    protected $refundNotifyUrl = 'http://api.zerobike.cn/api/pay/refund/notify';
-
-    protected $key = 'poiuytgnbvcdxsfrewfbglkiujm12368';
-
-    protected $appid = 'wxdadaa1493ebcd7bf';
-
-    protected $mch_id = '1536924251';
-
-    protected $SSLCERT_PATH = 'Service/Cert/apiclient_cert.pem';
-
-    protected $SSLKEY_PATH = 'Service/Cert/apiclient_key.pem';
-
+    //提现接口哦
     protected $transfers = 'https://api.mch.weixin.qq.com/mmpaymkttransfers/promotion/transfers';
+    //商户密钥
+    protected $key = 'poiuytgnbvcdxsfrewfbglkiujm12368';
+    //微信Appid
+    protected $app_id = 'wxdadaa1493ebcd7bf';
+    //微信商户号
+    protected $mch_id = '1536924251';
+    //证书路径(Ps：主要用户退款，提现)
+    protected $SSLCERT_PATH = 'Service/Cert/apiclient_cert.pem';
+    //证书路径
+    protected $SSLKEY_PATH = 'Service/Cert/apiclient_key.pem';
 
 
     public function __construct()
     {
-        $this->appid = config('appid') ? config('appid') : $this->appid;
+        $this->app_id = config('appid') ? config('appid') : $this->app_id;
         $this->mch_id = config('mch_id') ? config('mch_id') : $this->mch_id;
         $this->key = config('key') ? config('key') : $this->key;
+        $this->SSLCERT_PATH = config('apiclient_cert') ? config('apiclient_cert') : $this->key;
+        $this->SSLKEY_PATH = config('apiclient_key') ? config('apiclient_key') : $this->key;
+
     }
 
-    //小程序下单
-    public function ordering($out_trade_no, $total_fee, $spbill_create_ip, $product_id, $openid, $notifyUrl, $body)
+    /**
+     * @param $out_trade_no 订单编号
+     * @param $total_fee 支付金额
+     * @param $openid 用户OpenId
+     * @param $notifyUrl 回调地址
+     * @param $body 支付内容
+     * @return array|bool
+     * Date: 2019/5/31 0031
+     * 小程序支付
+     */
+    public function Mini_Pay($out_trade_no, $total_fee,  $openid, $notifyUrl, $body)
     {
         $paydata = [
-            'appid' => $this->appid,
+            'appid' => $this->app_id,
             'mch_id' => $this->mch_id,
             'device_info' => '小程序',
             'nonce_str' => $this->nonce_str(),
@@ -53,11 +61,10 @@ class WeChatPayService
             'body' => $body,
             'out_trade_no' => $out_trade_no,
             'fee_type' => 'CNY',
-            'total_fee' => $total_fee * 100,
-            'spbill_create_ip' => $spbill_create_ip,
+            'total_fee' => intval($total_fee * 100),
+            'spbill_create_ip' => $_SERVER["REMOTE_ADDR"],
             'notify_url' => $notifyUrl,
             'trade_type' => 'JSAPI',
-            'product_id' => $product_id,
             'openid' => $openid
         ];
 //        dd($paydata);
@@ -67,12 +74,11 @@ class WeChatPayService
         $resultData = $this->postXmlOrJson($this->unifiedorderUrl, $paydata);
         //接收下单结果 返回格式是xml的
         $resultData = $this->XmlToArr($resultData);
-        Log::info($resultData);
         // 在resultData 中就有微信服务器返回的prepay_id
         if ($resultData['return_code'] == 'SUCCESS') {
             if ($resultData['result_code'] == 'SUCCESS') {
                 $reData = [
-                    'appId' => $this->appid,
+                    'appId' => $this->app_id,
                     'timeStamp' => (string)time(),
                     'nonceStr' => $this->nonce_str(),
                     'signType' => 'MD5',
@@ -84,6 +90,225 @@ class WeChatPayService
         }
         return false;
     }
+
+    /**
+     * @param $out_trade_no 订单编号
+     * @param $total_fee 订单金额
+     * @param $openid 用户OPENID
+     * @param $notifyUrl 回调地址
+     * @param $body 支付内容
+     * @return array|bool
+     * Date: 2019/5/31 0031
+     * 公众号下单
+     */
+    public function WX_Pay($out_trade_no, $total_fee, $openid, $notifyUrl, $body)
+    {
+        $paydata = [
+            'appid' => $this->app_id,
+            'mch_id' => $this->mch_id,
+            'device_info' => '公众号',
+            'nonce_str' => $this->nonce_str(),
+            'sign_type' => 'MD5',
+            'body' => $body,
+            'out_trade_no' => $out_trade_no,
+            'fee_type' => 'CNY',
+            'total_fee' => intval($total_fee * 100),
+            'spbill_create_ip' => $_SERVER["REMOTE_ADDR"],
+            'notify_url' => $notifyUrl,
+            'trade_type' => 'JSAPI',
+            'openid' => $openid
+        ];
+//        dd($paydata);
+        //添加签名
+        $paydata['sign'] = $this->getSign($paydata);
+        $paydata = $this->arrayToXml($paydata);
+        $resultData = $this->postXmlOrJson($this->unifiedorderUrl, $paydata);
+        //接收下单结果 返回格式是xml的
+//        Log::info($resultData);
+        $resultData = $this->XmlToArr($resultData);
+        // 在resultData 中就有微信服务器返回的prepay_id
+        if ($resultData['return_code'] == 'SUCCESS') {
+            if ($resultData['result_code'] == 'SUCCESS') {
+                $reData = [
+                    'appId' => $this->app_id,
+                    'timeStamp' => (string)time(),
+                    'nonceStr' => $this->nonce_str(),
+                    'signType' => 'MD5',
+                    'package' => 'prepay_id=' . $resultData['prepay_id']
+                ];
+                $reData['paySign'] = $this->getSign($reData);
+                return $reData;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param $out_trade_no 订单编号唯一的
+     * @param $total_fee 订单金额
+     * @param $notifyUrl 回调地址
+     * @param $body 支付内容
+     * @return array|bool 返回一条url，转成二维码就可以支付了
+     * Date: 2019/5/31 0031
+     * 扫码支付
+     */
+    public function Native_Pay($out_trade_no, $total_fee, $notifyUrl,$body)
+    {
+        //$orderName = iconv('GBK','UTF-8',$orderName);
+        $paydata = array(
+            'appid' => $this->app_id,
+            'attach' => 'pay',             //商家数据包，原样返回，如果填写中文，请注意转换为utf-8
+            'body' => $body,
+            'mch_id' => $this->mch_id,
+            'nonce_str' => $this->nonce_str(),
+            'notify_url' => $notifyUrl,
+            'out_trade_no' => $out_trade_no,
+            'spbill_create_ip' => $_SERVER["REMOTE_ADDR"],
+            'total_fee' => intval($total_fee * 100),       //单位 转为分
+            'trade_type' => 'NATIVE',
+        );
+        $paydata['sign'] = $this->getSign($paydata);
+        $responseXml = $this->postXmlOrJson($this->unifiedorderUrl, $this->arrayToXml($paydata));
+        $resultData = $this->XmlToArr($responseXml);
+
+        if ($resultData['return_code'] == 'SUCCESS') {
+            if ($resultData['result_code'] == 'SUCCESS') {
+                $reData = [
+                    'appId' => $this->app_id,
+                    'timeStamp' => (string)time(),
+                    'nonceStr' => $this->nonce_str(),
+                    'signType' => 'MD5',
+                    'package' => 'prepay_id=' . $resultData['prepay_id'],
+                    "code_url" => $resultData['code_url'][0],
+                ];
+                $reData['paySign'] = $this->getSign($reData);
+                return $reData;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param $out_trade_no 订单编号
+     * @param $total_fee 订单价格
+     * @param $notifyUrl 回调地址
+     * @param $body 支付内容
+     * @param $web_url 网站链接
+     * @param $redirect_url 跳转链接
+     * @return bool|string
+     * Date: 2019/5/31 0031
+     * H5微信支付
+     */
+    public function H5_Pay($out_trade_no, $total_fee,$notifyUrl, $body,$web_url,$redirect_url)
+    {
+        $paydata = array(
+            'appid' => $this->app_id,
+            'mch_id' => $this->mch_id,
+            'nonce_str' => $this->nonce_str(),
+            'body' => $body,
+            'out_trade_no' => $out_trade_no,
+            'total_fee' => intval($total_fee * 100),     //单位 转为分
+            'spbill_create_ip' => $_SERVER["REMOTE_ADDR"],
+            'notify_url' => $notifyUrl,
+            'trade_type' => 'MWEB',
+            'scene_info' => '{"h5_info": {"type":"Wap","wap_url": "'.$web_url.'","wap_name": "h5pay"}}',
+        );
+        $paydata['sign'] = $this->getSign($paydata);
+        $responseXml = $this->postXmlOrJson($this->unifiedorderUrl, $this->arrayToXml($paydata));
+        $resultData = $this->XmlToArr($responseXml);
+        if ($resultData['return_code'] == 'SUCCESS') {
+            if ($resultData['result_code'] == 'SUCCESS') {
+                $url_encode_redirect_url = urlencode($redirect_url);
+                $url = $resultData['mweb_url'] . '&redirect_url=' . $url_encode_redirect_url;
+                return $url;
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * @param $transaction_id 微信支付流水号
+     * @param $out_refund_no 商家订单号
+     * @param $total_fee 支付金额
+     * @param $refund_desc 退款说明
+     * @param string $notifyUrl 回调地址
+     * @return array|bool
+     * Date: 2019/5/31 0031
+     * 退款（Ps:退款可以用商家自己生成的地址，也可以用微信支付的流水号）
+     */
+    public function Refund($transaction_id, $out_refund_no, $total_fee,$refund_desc,$notifyUrl='')
+    {
+        $refund = [
+            'appid' => $this->app_id,
+            'mch_id' => $this->mch_id,
+            'nonce_str' => $this->nonce_str(),
+            'sign_type' => 'MD5',
+            'transaction_id' => $transaction_id,//微信订单号
+            'refund_desc' => $refund_desc,//退款说明
+            'out_refund_no' => $out_refund_no,//商家订单号
+            'total_fee' => $total_fee,
+            'refund_fee' => $total_fee,
+            'notify_url' => $notifyUrl//回调地址
+        ];
+        //添加签名
+        $refund['sign'] = $this->getSign($refund);
+        $refund = $this->arrayToXml($refund);
+        $resultData = $this->postXmlSSLCurl($this->refundUrl, $refund);
+        $resultData = $this->XmlToArr($resultData);
+        if ($resultData){
+            if ($resultData['return_code'] == 'SUCCESS') {
+                if ($resultData['result_code'] == 'SUCCESS') {
+                    $postData = [
+                        'transaction_id' => $resultData['transaction_id'],
+                        ];
+                    return $postData;
+                }
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * @param $partner_trade_no 商家商户号
+     * @param $openid 用户OpenId
+     * @param $amount 提现金额
+     * @param $desc 提现描述
+     * @return bool
+     * Date: 2019/5/31 0031
+     * 用户提现到零钱
+     */
+    public function transfers($partner_trade_no, $openid, $total_fee, $desc)
+    {
+        $transfers = [
+            'mch_appid' => $this->app_id,
+            'mchid' => $this->mch_id,
+            'nonce_str' => $this->nonce_str(),
+            'sign_type' => 'MD5',
+            'partner_trade_no' => $partner_trade_no,
+            'openid' => $openid,
+            'check_name' => 'NO_CHECK',
+            'amount' => intval($total_fee * 100),
+            'desc' => $desc,
+            'spbill_create_ip' => $_SERVER['REMOTE_ADDR']
+        ];
+        //添加签名
+        $transfers['sign'] = $this->getSign($transfers);
+        $transfers = $this->arrayToXml($transfers);
+        $resultData = $this->postXmlSSLCurl($this->transfers, $transfers);
+        $resultData = $this->XmlToArr($resultData);
+        if ($resultData['return_code'] == 'SUCCESS') {
+            if ($resultData['result_code'] == 'SUCCESS') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
+
 
     //生成随机字符串
     protected function nonce_str()
@@ -172,7 +397,6 @@ class WeChatPayService
     //需要使用证书的请求
     function postXmlSSLCurl($url, $xml, $second = 30)
     {
-        Log::info('证书路径' . app_path($this->SSLCERT_PATH));
         $ch = curl_init();
         //超时时间
         curl_setopt($ch, CURLOPT_TIMEOUT, $second);
@@ -201,7 +425,7 @@ class WeChatPayService
             return $data;
         } else {
             $error = curl_errno($ch);
-            Log::info('curl出错，错误码' . $error);
+
             curl_close($ch);
             return false;
         }
