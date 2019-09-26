@@ -137,4 +137,38 @@ class Address extends Base
         }
 
     }
+
+
+    /**
+     * 设置默认地址
+     */
+    public function set_default(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+        $address_id = $request->param('address_id');
+        if (!$address_id) {
+            return JsonError('参数获取失败');
+        }
+
+        Db::startTrans();
+        try {
+            $address = AddressModel::where('id', $address_id)->where('user_id', $this->user_id)->where('type', 1)->find();
+            if (!$address) {
+                return JsonError('数据获取失败');
+            }
+            AddressModel::where('user_id', $this->user_id)->where('type', 1)->update([
+                'is_default' => 0
+            ]);
+
+            $address->is_default = 1;
+            $address->save();
+            Db::commit();
+            return JsonSuccess();
+        } catch (Exception $exception) {
+            Db::rollback();
+            return JsonError('设置失败');
+        }
+    }
 }

@@ -13,7 +13,10 @@
 namespace app\admin\model;
 
 use \think\Model;
-class Users extends Model
+class Users extends BaseModel
 {
-
+    public function getImageAttr($value)
+    {
+        return $this->prefixImgUrl($value);
+    }
 }
