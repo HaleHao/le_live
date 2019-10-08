@@ -247,8 +247,8 @@ class WeChatPayService
             'transaction_id' => $transaction_id,//微信订单号
             'refund_desc' => $refund_desc,//退款说明
             'out_refund_no' => $out_refund_no,//商家订单号
-            'total_fee' => $total_fee,
-            'refund_fee' => $total_fee,
+            'total_fee' => intval($total_fee * 100),
+            'refund_fee' => intval($total_fee * 100),
             'notify_url' => $notifyUrl//回调地址
         ];
         //添加签名

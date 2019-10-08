@@ -22,8 +22,8 @@ class WeChatService
 
     public function __construct()
     {
-        $this->appid = GetConfig('wx_app_id') ? config('wx_app_id') : $this->appid;
-        $this->secret = config('wx_secret') ? config('wx_secret') : $this->secret;
+        $this->appid = GetConfig('wx_app_id') ? GetConfig('wx_app_id') : $this->appid;
+        $this->secret = GetConfig('wx_secret') ? GetConfig('wx_secret') : $this->secret;
     }
 
     public function authorization($code)

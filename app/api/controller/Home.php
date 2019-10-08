@@ -17,7 +17,7 @@ class Home extends Base
      */
     public function index(Request $request)
     {
-
+        $district = $request->param('district');
         //轮播图
         $banner = Banner::order('sort','asc')->order('create_time','desc')->field(['image','pages'])->select();
 
@@ -25,7 +25,11 @@ class Home extends Base
         $column = Column::order('sort','asc')->order('Create_time','desc')->field(['id','image','title'])->select();
 
         //人气微厨
-        $chef = Users::order('like_num','desc')->order('fan_num','desc')->field(['id','nickname','image','avatar'])->limit(10)->select();
+        $chef = Users::order('like_num','desc')->order('fan_num','desc')->field(['id','nickname','image','avatar','skill'])->limit(10)->select();
+
+        if ($district){
+            $chef = Users::where('district','like','%'.$district.'%')->order('like_num','desc')->order('fan_num','desc')->field(['id','nickname','image','avatar'])->limit(10)->select();
+        }
 
         //附近美味
         $data = [
@@ -50,7 +54,7 @@ class Home extends Base
             ->join('address a', ['m.user_id=a.user_id', 'a.is_default=1'],'left')
             ->join('users u', ['m.user_id=a.id'],'left')
             ->join('menus_like l',['m.id=l.menu_id','l.user_id='.$this->user_id.''],'left')
-            ->field(['m.id,m.title,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,u.avatar,u.nickname']);
+            ->field(['m.id,m.title,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,u.avatar,u.nickname,l.id as is_like']);
 
         $keyword = $request->param('keyword');
         if($keyword){
@@ -70,19 +74,22 @@ class Home extends Base
             $val['distance'] = GetDistance($form, $to);
             $distance[] = $data[$key]['distance'];
             $val['is_like'] = $val['is_like'] ? 1:0;
+            $val['cover_image'] = GetConfig('img_prefix','http://www.le-live.com') . $val['cover_image'];
         }
-        array_multisort($distance, SORT_ASC, $data);
-
+        if ($data){
+            array_multisort($distance, SORT_ASC, $data);
+        }
         $data = [
             'list' => $data,
             'count' => $count,
         ];
-
         return JsonSuccess($data);
     }
 
-    
+    public function coupon_list(Request $request)
+    {
 
+    }
 
 
 }

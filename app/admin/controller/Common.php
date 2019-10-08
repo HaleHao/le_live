@@ -40,7 +40,7 @@ class Common extends Controller
      */
     public function upload($module='admin',$use='admin_thumb')
     {
-        if($this->request->file('file')){
+            if($this->request->file('file')){
             $file = $this->request->file('file');
         }else{
             $res['code']=1;

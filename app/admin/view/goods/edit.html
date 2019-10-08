@@ -117,7 +117,7 @@
     <div class="layui-form-item">
       <label class="layui-form-label required">图片</label>
       <div class="layui-input-block" style="max-width:600px;">
-        <input name="image" readonly="readonly" lay-verify="required" value="{$goods.cover_url}" autocomplete="off" style="margin-right: 0px;" class="layui-input layui-input-inline image" type="text">
+        <input name="image" readonly="readonly" lay-verify="required" value="{$goods.cover_image}" autocomplete="off" style="margin-right: 0px;" class="layui-input layui-input-inline image" type="text">
         <button type="button" class="layui-btn layui-btn-primary" id="thumb"><i class="fa fa-cloud-upload"></i></button>
         <div class="upload-more">
           {foreach name="goods.image" item="val"}
@@ -147,38 +147,36 @@
     </div>
 
     <div id="ggz">
-      {notempty name="$spec_i"}
-      {volist name="$spec_i" id="v"}
-      <div class="layui-form-item" id="{$v['id']}spec">
+
+      <div class="layui-form-item" id="{$goods.id}spec">
         <label class="layui-form-label"></label>
         <div class="dtb">
           <div class="layui-input-inline dtt">
             <div class="dtto">
-              <div><b>{$v['title']}</b></div>
-              <a class="dttoo delspec" onclick="delone({$v.id})">×</a>
+              <div><b>{$goods.spec_team}</b></div>
+              <a class="dttoo delspec" onclick="delone({$goods.id})">×</a>
             </div>
             <div class="dttt">
-              <div class="son" id="{$v['id']}son">
-                {notempty name="$v.arr"}
-                {volist name="$v.arr" id="vv"}
+              <div class="son" id="son">
+                {notempty name="$spec"}
+                {volist name="$spec" id="vv"}
                 <div class="dttto" id="{$vv.id}cl">
-                  <span class="dtttot">{$vv.title}</span>
-                  <a class="dtttof" onclick="delspecson({$v.id})">×</a>
+                  <span class="dtttot">{$vv.name}</span>
+                  <a class="dtttof" onclick="delspecson({$vv.id})">×</a>
                 </div>
                 {/volist}
                 {/notempty}
               </div>
               <div class="dtd">
                 <div class="dtdo">规格值</div>
-                <div class="dtdt"><input name="spec" lay-verify="required" id="{$v['id']}spectwo" autocomplete="off" placeholder="颜色、尺码等" class="layui-input dtdta" type="text"></div>
-                <div class="dtdf" onclick="addspecson({$v['id']})">添加</div>
+                <div class="dtdt"><input name="spec" lay-verify="required" id="{$vv['id']}spectwo" autocomplete="off" placeholder="颜色、尺码等" class="layui-input dtdta" type="text"></div>
+                <div class="dtdf" onclick="addspecson({$vv['id']})">添加</div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      {/volist}
-      {/notempty}
+
     </div>
 
     <div class="layui-form-item">
@@ -186,28 +184,27 @@
       <div class="layui-input-inline ctv">
         <table class="layui-table" lay-size="sm" id="table">
           <thead>
-          {notempty name="$spec"}
-          {volist name="$spec" id="v"}
-          <th>{$v.title}</th>
-          {/volist}
+          <tr>
+          {notempty name="$goods.spec_team"}
+
+            <th>{$goods.spec_team}</th>
+
           {/notempty}
-          <th>库存   <input style="height: 22px;width: 80px;" type="text" class="layui-input layui-input-inline editinpi" id="setinventory"><a class="layui-btn layui-btn-xs layui-btn-primary" href="javascript:;" onclick="setinventory()">一键设置</a></th>
-          <th>价格   <input style="height: 22px;width: 80px;" type="text" class="layui-input layui-input-inline editinpi" id="setgrowth"><a class="layui-btn layui-btn-xs layui-btn-primary" onclick="setgrowth()">一键设置</a></th>
+          <th>库存   <input style="height: 22px;width: 80px;" type="text" class="layui-input layui-input-inline editinpi" id="setinventory">
+            <a class="layui-btn layui-btn-xs layui-btn-primary" href="javascript:;" onclick="setinventory()">一键设置</a></th>
+          <th>价格   <input style="height: 22px;width: 80px;" type="text" class="layui-input layui-input-inline editinpi" id="setgrowth">
+            <a class="layui-btn layui-btn-xs layui-btn-primary" onclick="setgrowth()">一键设置</a></th>
           </tr>
           </thead>
           <tbody>
-          {notempty name="$spec_val"}
-          {volist name="$spec_val" id="v"}
-          <tr>
-            {notempty name="$spec"}
-            {volist name="$spec" id="vo"}
-            <td>{notempty name="$v[$vo.str]"}{$v[$vo.str]}{/notempty}</td>
+          {notempty name="$spec"}
+            {volist name="$spec" id="v"}
+            <tr>
+              <td>{$v.name}</td>
+              <td><input type="text" style="height: 22px;width: 80px;" class="layui-input layui-input-inline editinp a" value="{$v.inventory}" name="inventory[]"></td>
+              <td><input type="text" style="height: 22px;width: 80px;" class="layui-input layui-input-inline editinp b" value="{$v.price}" name="growth[]"></td>
+            </tr>
             {/volist}
-            {/notempty}
-            <td><input type="text" style="height: 22px;width: 80px;" class="layui-input layui-input-inline editinp a" value="{$v.inventory}" name="inventory[]"></td>
-            <td><input type="text" style="height: 22px;width: 80px;" class="layui-input layui-input-inline editinp b" value="{$v.growth}" name="growth[]"><input type="hidden" value="{$v.spec}" name="spec_val[]"></td>
-          </tr>
-          {/volist}
           {/notempty}
           </tbody>
         </table>

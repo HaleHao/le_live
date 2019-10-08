@@ -21,13 +21,13 @@ class Common extends Base
         }
         $module = $this->request->has('module') ? $this->request->param('module') : $module;//模块
         $web_config = Db::name('webconfig')->where('web','web')->find();
-        $info = $file->validate(['size'=>$web_config['file_size']*1024,'ext'=>$web_config['file_type']])->rule('date')->move(ROOT_PATH . 'public' . DS . 'uploads' . DS . $module . DS . $use);
+        $info = $file->validate(['ext'=>$web_config['file_type']])->rule('date')->move(ROOT_PATH . 'public' . '/' . 'uploads' . '/' . $module .  '/' . $use);
         if($info) {
             //写入到附件表
             $data = [];
             $data['module'] = $module;
             $data['filename'] = $info->getFilename();//文件名
-            $data['filepath'] = DS . 'uploads' . DS . $module . DS . $use . DS . $info->getSaveName();//文件路径
+            $data['filepath'] =  '/' . 'uploads' .  '/' . $module .  '/' . $use . '/' . $info->getSaveName();//文件路径
             $data['fileext'] = $info->getExtension();//文件后缀
             $data['filesize'] = $info->getSize();//文件大小
             $data['create_time'] = time();//时间
@@ -41,13 +41,13 @@ class Common extends Base
             }
             $data['use'] = $this->request->has('use') ? $this->request->param('use') : $use;//用处
             $res['id'] = Db::name('attachment')->insertGetId($data);
-            $res['src'] = DS . 'uploads' . DS . $module . DS . $use . DS . $info->getSaveName();
+            $res['src'] = '/' . 'uploads' . '/' . $module . '/' . $use . '/' . $info->getSaveName();
             $res['url'] = GetConfig('img_prefix','http://www.le-live.com') . $res['src'];
 //            addlog($res['id']);//记录日志
             return JsonSuccess($res);
         } else {
             // 上传失败获取错误信息
-            return JsonError('上传失败：'.$file->getError());
+            return JsonError($file->getError());
         }
     }
 }

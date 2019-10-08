@@ -13,10 +13,15 @@
 namespace app\admin\model;
 
 use \think\Model;
-class MenusOrder extends BaseModel
+class MenusOrderDetail extends BaseModel
 {
-    public function menus()
+    public function menu()
     {
-        return $this->hasMany('MenusOrderDetail','order_id','id')->field(['menu_id','order_id','title','cover_image','amount','unit_price','total_price']);
+        return $this->hasOne('Menus','id','menu_id');
+    }
+
+    public function getCoverImageAttr($value)
+    {
+        return $this->prefixImgUrl($value);
     }
 }

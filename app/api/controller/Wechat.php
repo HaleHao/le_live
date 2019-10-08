@@ -11,7 +11,6 @@ class Wechat extends Base
 
     /**
      * 微信授权登录
-     * Date: 2019/9/16 0016
      */
     public function login(Request $request)
     {
@@ -19,7 +18,8 @@ class Wechat extends Base
         if ($code){
             $wechat = new WeChatService();
             $info = $wechat->authorization($code);
-            if ($info){
+
+            if (isset($info['openid'])){
                 $openid = $info['openid'];
 
                 $nickname = $request->param('nickname');
@@ -28,12 +28,24 @@ class Wechat extends Base
 
                 $gender = $request->param('gender');
 
+                $first_user_id = $request->param('first_user_id');
+
                 $time = time();
 
                 $user = Users::where('openid',$openid)->find();
                 if (!$user){
                     $user = new Users();
                     $user->openid = $openid;
+
+                    if ($first_user_id){
+                        $user->first_user_id = $first_user_id;
+                        $second_user = Users::where('id',$first_user_id)->find();
+                        if ($second_user){
+                            $second_user_id = $second_user->first_user_id;
+                            $user->second_user_id = $second_user_id;
+                        }
+                    }
+
                 }
                 $user->last_time = $time;
                 $user->last_ip = $_SERVER['REMOTE_ADDR'];
@@ -43,9 +55,8 @@ class Wechat extends Base
 
                 if ($user->save()){
                     //生成随机token
-                    $user_id = $user->getLastInsID();
 
-                    $token = $this->saveCache($user_id);
+                    $token = $this->saveCache($user->id);
                     $data = [
                         'token' => $token
                     ];
@@ -58,7 +69,9 @@ class Wechat extends Base
         return JsonError('code获取失败');
     }
 
-
+    /**
+     * 保存缓存
+     */
     public function saveCache($user_id)
     {
         $token = $this->getToken();
@@ -66,7 +79,9 @@ class Wechat extends Base
         return $token;
     }
 
-    //获取TOKEN
+    /**
+     * 获取TOKEN
+     */
     protected function getToken()
     {
         $str = md5(uniqid(md5(microtime(true)), true));  //生成一个不会重复的字符串

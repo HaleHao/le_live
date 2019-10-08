@@ -18,8 +18,19 @@ class Chef extends Base
      */
     public function lists(Request $request)
     {
-        $page = $request->param('page');
+        $page = $request->param('page',1);
         $type = $request->param('type', 1);
+
+
+        $query = Db::name('users')->where('is_auth', 1);
+        $list = $query->field(['id,image,nickname,skill,signature'])
+            ->page($page, 10)
+            ->select();
+        $count = $query->count();
+        foreach ($list as $key => &$val) {
+            $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
+        }
+
         if ($type == 1) {
             $longitude = $request->param('longitude');
             $latitude = $request->param('latitude');
@@ -54,6 +65,7 @@ class Chef extends Base
                 $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
             }
         }
+
         $data = [
             'list' => $list,
             'count' => $count,
@@ -74,7 +86,7 @@ class Chef extends Base
         }
         $chef = Users::where('id', $chef_id)
             ->where('is_auth', 1)
-            ->field(['id', 'like_num', 'fan_num', 'follower_num', 'avatar', 'nickname', 'city', 'signature', 'skill', 'is_auth'])
+            ->field(['id', 'like_num', 'fan_num', 'follower_num', 'avatar','gender', 'nickname', 'city', 'signature', 'skill', 'is_auth'])
             ->find();
 
         $res = Db::name('users_follower')->where('user_id', $this->user_id)->where('chef_id', $chef_id)->find();

@@ -14,7 +14,7 @@ class Base extends Controller
      */
     public function _initialize()
     {
-        $access_token = request()->header('access_token');
+        $access_token = request()->header('Access-Token');
         $user_id = Cache::get($access_token,0);
         $this->user_id = $user_id;
     }

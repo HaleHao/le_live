@@ -183,14 +183,14 @@ class Shopstreet extends Permissions
      */
     public function addspec(){
         $edit_value = json_decode(input('edit_value'),true);
-        $title = \db('spec')->where('title',input('value'))->where('pid',0)->find();
+        $title = \db('goods_specification')->where('title',input('value'))->where('pid',0)->find();
         $is_there = 0;
         $value = input('value');
         if(!empty($title)){
             $ret = $title['id'];
         }else{
             $data['title'] = input('value');
-            $ret = \db('spec')->insertGetId($data);
+            $ret = \db('goods_specification')->insertGetId($data);
         }
         if(!empty($edit_value)){
             foreach ($edit_value as $k=>$v){
@@ -280,14 +280,14 @@ class Shopstreet extends Permissions
      */
     public function addspecson(){
         $edit_value = json_decode(input('edit_value'),true);
-        $title = \db('spec')->where('title',input('value'))->where('pid',input('id'))->find();
+        $title = \db('goods_specification')->where('title',input('value'))->where('pid',input('id'))->find();
         $value = input('value');
         if(!empty($title)){
             $ret = $title['id'];
         }else{
             $data['title'] = input('value');
             $data['pid'] = input('id');
-            $ret = \db('spec')->insertGetId($data);
+            $ret = \db('goods_specification')->insertGetId($data);
         }
         if(!empty($edit_value)){
             $is_there = 0;
@@ -344,10 +344,10 @@ class Shopstreet extends Permissions
         $arr = array();
         foreach ($edit_value as $k=>$v){
             if(!empty($v['arr'])){
-                $retArr[] = \db('spec')->where('id',$v['str'])->find();
+                $retArr[] = \db('goods_specification')->where('id',$v['str'])->find();
                 $a_Arr = array();
                 foreach ($v['arr'] as $ko=>$vo){
-                    $a_Arr[] = \db('spec')->where('id',$vo)->find();
+                    $a_Arr[] = \db('goods_specification')->where('id',$vo)->find();
                 }
                 if(!empty($a_Arr)){
                     $arr[] = $a_Arr;

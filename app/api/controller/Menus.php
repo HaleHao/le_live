@@ -53,6 +53,8 @@ class Menus extends Base
                 $val['distance'] = GetDistance($form, $to);
                 $distance[] = $data[$key]['distance'];
                 $val['is_like'] = $val['is_like'] ? 1 : 0;
+                $val['cover_image'] = GetConfig('img_prefix','http://www.le-live.com') . $val['cover_image'];
+
             }
 
             array_multisort($distance, SORT_ASC, $data);
@@ -65,6 +67,9 @@ class Menus extends Base
         ];
         return JsonSuccess($return);
     }
+
+
+
 
     /**
      * 菜谱详情
@@ -81,9 +86,23 @@ class Menus extends Base
             ->where('id', $id)
             ->field(['id', 'title', 'introduce', 'user_id', 'is_reserve', 'like_num', 'collect_num', 'comment_num', 'create_time'])
             ->find();
-        $chef = Users::where('id', $menu->user_id)
-            ->field(['id,nickname,avatar,city,signature'])
+        if (!$menu){
+            return JsonError('数据获取失败');
+        }
+
+        if ($menu->reserve){
+            $menu['is_reserve'] = 1;
+            $menu['price'] = $menu->reserve->price;
+        }else{
+            $menu['is_reserve'] = 0;
+            $menu['price'] = 0;
+        }
+        $chef = Users::where('u.id', $menu->user_id)->alias('u')
+            ->join('users_follower f','u.id=f.chef_id and f.user_id='.$this->user_id,'left')
+            ->field(['u.id,u.nickname,u.avatar,u.city,u.signature','u.create_time','f.id as is_follower'])
             ->find();
+
+        $chef->is_follower = $chef->is_follower?1:0;
 
         $comment = Db::name('menus_comment')->alias('c')
             ->join('users u', 'c.user_id =u.id', 'left')
@@ -93,15 +112,16 @@ class Menus extends Base
             ->limit(3)
             ->select();
 
-        $reserve = [];
-        if ($menu->is_reserve) {
-            $reserve = Db::name('menus_reserve')->alias('r')
-                ->join('menus m', 'm.id = r.menu_id', 'left')
-                ->where('serving_date', $menu->reserve->serving_date)
-                ->field(['m.id,m.title,m.cover_image'])
-                ->select();
-        }
 
+        $reserve = Db::name('menus_reserve')->alias('r')
+            ->join('menus m', 'm.id = r.menu_id', 'left')
+            ->where('serving_date', $menu->reserve['serving_date'])
+            ->field(['m.id,m.title,m.cover_image','r.price'])
+            ->select();
+
+        foreach($reserve as $key => $val){
+            $reserve[$key]['cover_image'] = GetConfig('img_prefix','http://www.le-live.com') . $val['cover_image'];
+        }
 
         $comment = ToTree($comment);
 
@@ -155,19 +175,20 @@ class Menus extends Base
         $menu = MenusModel::where('id', $id)->find();
         if (!$menu) {
             return JsonError('数据获取失败');
-        }
-        if ($this->user_id == $menu->user_id) {
+        }        if ($this->user_id == $menu->user_id) {
             return JsonError('不能收藏自己的菜品');
         }
 
         $collect = MenusCollect::where('user_id', $this->user_id)->where('menu_id', $id)->find();
         if ($collect) {
             //删除收藏信息
+            $menu->setDec('collect_num',1);
             if ($collect->delete()) {
                 return JsonSuccess([], '取消成功');
             }
             return JsonError('取消失败');
         } else {
+            $menu->setInc('collect_num',1);
             $collect = new MenusCollect();
             $collect->user_id = $this->user_id;
             $collect->menu_id = $id;
@@ -201,9 +222,12 @@ class Menus extends Base
         }
 
         $like = MenusLike::where('user_id', $this->user_id)->where('menu_id', $id)->find();
+
         if ($like) {
             //删除收藏信息
             if ($like->delete()) {
+                $menu->setDec('like_num',1);
+                Users::where('id',$menu->user_id)->setDec('like_num',1);
                 return JsonSuccess([], '取消成功');
             }
             return JsonError('取消失败');
@@ -211,7 +235,10 @@ class Menus extends Base
             $like = new MenusLike();
             $like->user_id = $this->user_id;
             $like->menu_id = $id;
+
             if ($like->save()) {
+                $menu->setInc('like_num',1);
+                Users::where('id',$menu->user_id)->setDec('like_num',1);
                 return JsonSuccess([], '点赞成功');
             }
             return JsonError('点赞失败');
@@ -364,19 +391,21 @@ class Menus extends Base
         try {
             $reserve = new MenusReserve();
 
+            $reserve->user_id = $this->user_id;
+
             $reserve->menu_id = $data['menu_id'];
 
             $reserve->serving_time = strtotime($data['serving_time']);
 
-            $reserve->serving_date = date('Y-m-d H:i', strtotime($data['serving_time']));
+            $reserve->serving_date = date('Y-m-d', strtotime($data['serving_time']));
 
             $reserve->end_time = strtotime($data['serving_time'] . $data['end_time']);
 
-            $reserve->end_date = $data['end_time'];
+            $reserve->end_date = date('H:i',strtotime($data['end_time']));
 
             $reserve->start_time = strtotime($data['serving_time'] . $data['start_time']);
 
-            $reserve->end_date = $data['end_time'];
+            $reserve->start_date = date('H:i',strtotime($data['start_time']));
 
             $reserve->price = $data['price'];
 
@@ -427,7 +456,7 @@ class Menus extends Base
 //            ->page($page,10)->select();
 
 
-        $arr = Db::name('users_follower')->where('from_id', $this->user_id)->field('id')->select();
+        $arr = Db::name('users_follower')->where('user_id', $this->user_id)->field('id')->select();
         $arr = array_column($arr, 'id');
         $query = MenusModel::with(['images', 'user'])->whereIn('user_id', $arr);
         $list = $query->order('create_time', 'desc')
@@ -475,15 +504,5 @@ class Menus extends Base
 //
     }
 
-    /**
-     * 提交订单
-     */
-    public function order_submit(Request $request)
-    {
-        if (!$this->user_id) {
-            return JsonLogin();
-        }
-
-    }
 
 }

@@ -44,7 +44,7 @@ class Goods extends Permissions
             ['image','require','请上传图片'],
             ['unit','require','请填写单位'],
             ['sort','require','请填写排序'],
-//            ['description','require','请填写描述'],
+//            ['spec_team','require','请添加规格组'],
         ]);
         if (!$validate->check($data)){
             $this->error($validate->getError());
@@ -56,9 +56,8 @@ class Goods extends Permissions
                 $data['growth'][$k]?$act['growth']=$data['growth'][$k]:$act['growth']=0;
                 $arr[] = $act;
             }
-            $data['spec'] = json_encode($arr);
+            $data['spec'] = $arr;
         }
-
 
         try{
             Db::startTrans();
@@ -72,22 +71,36 @@ class Goods extends Permissions
             $goods->price = $data['price'];
             $goods->description = $data['description'];
             $goods->sort = $data['sort'];
-            $goods->cover_url = $data['images'][0];
+            $goods->cover_image = $data['images'][0];
             $goods->status = 0;
-            $goods->spec = $data['spec'];
+            $goods->spec_team = $data['spec_team'];
             $goods->edit_value = $data['edit_value'];
             $goods->save();
             $id = $goods->getLastInsID();
-            GoodsImage::where('id',$id)->delete();//先删除图片
+            GoodsImage::where('goods_id',$id)->delete();//先删除图片
             foreach($data['images'] as $val){
                 $image = new GoodsImage();
                 $image->goods_id = $id;
                 $image->image = $val;
                 $image->save();
             }
+            //先删除规格组
+            Db::name('goods_spec')->where('goods_id',$id)->delete();
+            foreach($data['spec'] as $val){
+                Db::name('goods_spec')->insert([
+                    'name' => $val['spec'],
+                    'inventory' => $val['inventory'],
+                    'price' => $val['growth'],
+                    'goods_id' => $id,
+                    'create_time' => time(),
+                    'update_time' => time()
+                ]);
+            }
             Db::commit();
             $this->success('提交成功','admin/goods/index');
         }catch (Exception $e){
+            var_dump($e);
+            exit;
             Db::rollback();
             $this->error('提交失败');
         }
@@ -101,39 +114,8 @@ class Goods extends Permissions
             $this->error('参数获取失败');
         }
         $goods = GoodsModel::with('image')->where('id',$id)->find();
-        $json_spec = json_decode($goods['edit_value'],true);
-        if(!empty($json_spec)) {
-            foreach ($json_spec as $k => $v) {
-                $spec_str = \db('spec')->where('id', $v['str'])->find();
-                if (!empty($v['arr'])) {
-                    foreach ($v['arr'] as $ko => $vo) {
-                        $spec_str['arr'][] = \db('spec')->where('id', $vo)->find();
-                    }
-                    $spec[] = $spec_str;
-                }
-                $spec_i[] = $spec_str;
-            }
-            foreach ($spec as $k => $v) {
-                $spec[$k]['str'] = $k . 'str';
-            }
-            if ($goods['spec']) {
-                $spec_val = json_decode($goods['spec'], true);
-                $specVal = array();
-                foreach ($spec_val as $k => $v) {
-                    $string = explode(':', $v['spec']);
-                    $act['inventory'] = $v['inventory'];
-                    $act['growth'] = $v['growth'];
-                    $act['spec'] = $v['spec'];
-                    foreach ($string as $ko => $vo) {
-                        $act[$ko . 'str'] = $vo;
-                    }
-                    $specVal[] = $act;
-                }
-                $this->assign('spec_val', $specVal);
-            }
-            $this->assign('spec', $spec);
-            $this->assign('spec_i', $spec_i);
-        }
+        $spec = Db::name('goods_spec')->where('goods_id',$id)->select();
+        $this->assign('spec',$spec);
         $this->assign('goods',$goods);
         return $this->fetch();
     }
