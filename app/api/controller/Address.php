@@ -12,7 +12,9 @@ use think\Validate;
 
 class Address extends Base
 {
-    //地址列表
+    /**
+     * 地址列表
+     */
     public function lists()
     {
         if (!$this->user_id) {
@@ -34,7 +36,9 @@ class Address extends Base
         return JsonSuccess($data);
     }
 
-    //地址详情
+    /**
+     * 地址详情
+     */
     public function detail(Request $request)
     {
         if (!$this->user_id) {
@@ -73,9 +77,9 @@ class Address extends Base
         return JsonSuccess($data);
     }
 
-
-
-    //修改or添加地址
+    /**
+     * 修改or添加地址
+     */
     public function save(Request $request)
     {
         if (!$this->user_id) {
@@ -84,9 +88,9 @@ class Address extends Base
         $validate = new Validate([
             ['name', 'require', '请填写收货人'],
             ['mobile', 'require', '请填写手机号码'],
-            ['province', 'require', '请填写省'],
-            ['city', 'require', '请填写城市'],
-            ['district', 'require', '请填写区域'],
+            ['province', 'require', '请选择省'],
+            ['city', 'require', '请选择城市'],
+            ['district', 'require', '请选择区域'],
             ['longitude', 'require', '请选择位置'],
             ['latitude', 'require', '请选择位置'],
             ['detail', 'require', '请填写详细地址'],
@@ -102,6 +106,13 @@ class Address extends Base
             if (!$address) {
                 $address = new AddressModel();
             }
+//            $location = $this->location($post['latitude'],$post['longitude']);
+//            if (!$location){
+//                return JsonError('地区获取失败');
+//            }
+//            if (!$location['district']){
+//                return JsonError('区域获取失败');
+//            }
             $address->user_id = $this->user_id;
             $address->name = $post['name'];
             $address->mobile = $post['mobile'];
@@ -129,7 +140,6 @@ class Address extends Base
             }
             $address->save();
             Db::commit();
-
             return JsonSuccess();
         } catch (Exception $exception) {
             Db::rollback();
@@ -137,7 +147,6 @@ class Address extends Base
         }
 
     }
-
 
     /**
      * 设置默认地址

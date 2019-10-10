@@ -71,7 +71,6 @@ class MenusOrder extends Base
 
         $coupon_id = $request->param('coupon_id');
         $coupon = '';
-        $preferential_price = 0;
         if ($coupon_id) {
             $coupon = Db::name('users_coupon')->alias('u')
                 ->join('coupon c', 'u.coupon_id=c.id', 'left')
@@ -83,6 +82,8 @@ class MenusOrder extends Base
                 ->field(['c.id,u.user_id,u.status,c.title,c.price,c.conditions'])
                 ->find();
             $preferential_price = $total_price - $coupon['price'];
+        } else {
+            $preferential_price = $total_price;
         }
 
         $num = ($end_min - $start_min) * 2 + 1;
@@ -132,7 +133,7 @@ class MenusOrder extends Base
 
         $list = Db::name('users_coupon')->alias('u')
             ->join('coupon c', 'c.id=u.coupon_id', 'left')
-            ->where('u.user_id',$this->user_id)
+            ->where('u.user_id', $this->user_id)
             ->where('c.conditions', '<=', $total_price)
             ->where('c.end_time', '>', time())
             ->where('u.status', 0)
@@ -289,6 +290,7 @@ class MenusOrder extends Base
                 'delivery_type' => $delivery_type,
                 'reci_address' => json_encode($reci_address),
                 'send_address' => json_encode($send_address),
+                'remark' => $request->param('remark'),
                 'submit_time' => $time,
                 'create_time' => $time,
                 'update_time' => $time,
@@ -694,13 +696,14 @@ class MenusOrder extends Base
 
         $order = Order::with('menus')
             ->where('id', $order_id)
-            ->where('chef_id', $this->user_id)
+            ->where('user_id', $this->user_id)
             ->find();
-        $order['reci_address'] = json_decode($order['reci_address'], true);
-        $order['send_address'] = json_decode($order['send_address'], true);
         if (!$order) {
             return JsonError('数据获取失败');
         }
+        $order['send_address'] = json_decode($order['send_address'], true);
+        $order['reci_address'] = json_decode($order['reci_address'], true);
+
         $data = [
             'detail' => $order
         ];
@@ -818,7 +821,7 @@ class MenusOrder extends Base
         Db::startTrans();
         try {
             $order = Order::where('user_id', $this->user_id)->where('id', $order_id)->find();
-            if ($order->order_status != 2){
+            if ($order->order_status != 2) {
                 return JsonError('当前订单不能确认收货');
             }
             $chef = Users::where('id', $order->chef_id)->find();
@@ -826,10 +829,41 @@ class MenusOrder extends Base
             $order->order_status = 4;
             $order->save();
             Db::commit();
-            return JsonSuccess([],'确认收货成功');
+            return JsonSuccess([], '确认收货成功');
         } catch (Exception $exception) {
             Db::rollback();
             return JsonError('确认收货失败');
+        }
+    }
+
+    /**
+     * 确认提货
+     */
+    public function buy_delivery(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+        $order_id = $request->param('order_id');
+
+        if (!$order_id) {
+            return JsonError('参数获取失败');
+        }
+        Db::startTrans();
+        try {
+            $order = Order::where('user_id', $this->user_id)->where('id', $order_id)->find();
+            if ($order->order_status != 3) {
+                return JsonError('当前订单不能确认提货');
+            }
+            $chef = Users::where('id', $order->chef_id)->find();
+            $chef->setInc('balance', $order->total_price);
+            $order->order_status = 4;
+            $order->save();
+            Db::commit();
+            return JsonSuccess([], '确认提货成功');
+        } catch (Exception $exception) {
+            Db::rollback();
+            return JsonError('确认提货失败');
         }
     }
 
@@ -839,12 +873,12 @@ class MenusOrder extends Base
      */
     public function taste_list(Request $request)
     {
-        if (!$this->user_id){
+        if (!$this->user_id) {
             return JsonLogin();
         }
-        $page = $request->param('page',10);
-        $list = Order::where('order_id',4)->where('user_id',$this->user_id)->page($page,10)->select();
-        $count = Order::where('order_id',4)->where('user_id',$this->user_id)->count();
+        $page = $request->param('page', 10);
+        $list = Order::where('order_id', 4)->where('user_id', $this->user_id)->page($page, 10)->select();
+        $count = Order::where('order_id', 4)->where('user_id', $this->user_id)->count();
 
         $data = [
             'list' => $list,
@@ -855,13 +889,66 @@ class MenusOrder extends Base
     }
 
     /**
-     * 已平常评价
+     * 已品尝常评价
      */
     public function taste_comment(Request $request)
     {
-        if (!$this->user_id){
+        if (!$this->user_id) {
             return JsonLogin();
         }
+        $data = $request->param();
+        $validate = new Validate([
+            ['content', 'require', '评论内容不能为空'],
+            ['menu_id', 'require', '菜品不能为空'],
+        ]);
+        if (!$validate->check($data)) {
+            return JsonError($validate->getError());
+        }
+        $order_id = $request->param('order_id');
+        if (!$order_id) {
+            return JsonError('订单ID获取失败');
+        }
+        try {
+            $order = Db::name('menus_order')->where('id',$order_id)->find();
+            if (!$order){
+                return JsonError('订单获取失败');
+            }
+            $menu = MenusModel::where('id', $data['menu_id'])->find();
+            if (!$menu) {
+                return JsonError('该菜谱不存在');
+            }
+
+
+            $parent_id = $request->param('parent_id', 0);
+
+            $comment = new MenusComment();
+            $comment->content = $data['content'];
+            $comment->menu_id = $data['menu_id'];
+            $comment->user_id = $this->user_id;
+            $comment->parent_id = $parent_id;
+            $comment->to_user_id = $menu->user_id;
+            $comment->type = 2;
+
+            if ($images = $request->param('images')) {
+                $comment->images = json_decode($images);
+            }
+            $comment->save();
+
+            //修改详情状态
+            Db::name('menus_order_detail')->where('order_id',$order_id)->where('menu_id',$data['menu_id'])->update([
+                'is_comment' => 1
+            ]);
+            Db::name('menus_order')->where('id',$order_id)->update([
+                'is_comment' => 1
+            ]);
+            return JsonSuccess([], '评论成功');
+
+        } catch (Exception $exception) {
+            return JsonError('评论失败');
+        }
+
 
     }
+    
+
 }

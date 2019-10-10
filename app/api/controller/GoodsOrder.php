@@ -8,7 +8,7 @@
 
 namespace app\api\controller;
 
-use app\admin\model\GoodsOrder;
+use app\admin\model\GoodsOrder as Order;
 use app\admin\model\GoodsSpec;
 use app\admin\model\Users;
 use app\api\service\WeChatPayService;
@@ -16,51 +16,8 @@ use think\Db;
 use think\Exception;
 use think\Request;
 
-class Goods extends Base
+class GoodsOrder extends Base
 {
-    /**
-     * 商品列表
-     */
-    public function lists(Request $request)
-    {
-        $page = $request->param('page', 1);
-        $list = Db::name('goods')
-            ->order('sort', 'asc')
-            ->order('create_time', 'desc')
-            ->field(['id', 'title', 'price', 'cover_image'])
-            ->page($page, 10)
-            ->select();
-        $count = Db::name('goods')->count();
-        foreach ($list as $key => $val) {
-            $list[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
-        }
-        $data = [
-            'list' => $list,
-            'count' => $count
-        ];
-
-        return JsonSuccess($data);
-    }
-
-    /**
-     * 商品详情
-     */
-    public function detail(Request $request)
-    {
-        $goods_id = $request->param('goods_id');
-        if (!$goods_id) {
-            return JsonError('参数获取失败');
-        }
-        $goods = \app\admin\model\Goods::with(['image', 'spec'])->where('id', $goods_id)->find();
-
-        $goods['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $goods['cover_image'];
-        $data = [
-            'detail' => $goods
-        ];
-
-        return JsonSuccess($data);
-    }
-
     /**
      * 订单预览
      */
@@ -136,7 +93,6 @@ class Goods extends Base
         return JsonSuccess($data);
     }
 
-
     /**
      * 订单提交
      */
@@ -155,7 +111,7 @@ class Goods extends Base
         }
         Db::startTrans();
         try {
-            $goods = \app\admin\model\Goods::where('id', $goods_id)->find();
+            $goods = Db::name('goods')->where('id', $goods_id)->find();
             if (!$goods) {
                 return JsonError('数据获取失败');
             }
@@ -166,11 +122,11 @@ class Goods extends Base
 
             $spec_id = $request->param('spec_id');
 
-            $spec = GoodsSpec::where('id', $spec_id)->find();
+            $spec = Db::name('goods_spec')->where('id', $spec_id)->find();
             if (!$spec) {
                 return JsonError('规格获取失败');
             }
-            if ($amount > $spec->inventory) {
+            if ($amount > $spec['inventory']) {
                 return JsonError('库存不足');
             }
 
@@ -189,7 +145,7 @@ class Goods extends Base
 //        $order->user_id = $this->user_id;
 //        $order->spec_id = $spec_id;
 //        $order->pay_price = $spec->pay_price;
-            $total_price = $spec->price * $amount;
+            $total_price = $spec['price'] * $amount;
 
             $coupon_id = $request->param('coupon_id', 0);
             if ($coupon_id) {
@@ -226,11 +182,13 @@ class Goods extends Base
                 'pay_price' => $preferential_price,
                 'total_price' => $total_price,
                 'preferential_price' => $preferential_price,
-                'spec_name' => $spec->name,
-                'goods_name' => $goods->title,
-                'cover_image' => $goods->cover_image,
+                'spec_name' => $spec['name'],
+                'goods_name' => $goods['title'],
+                'cover_image' => $goods['cover_image'],
+                'unit' => $goods['unit'],
+                'unit_price' => $goods['price'],
                 'amount' => $amount,
-                'spec_image' => $spec->image,
+                'spec_image' => $spec['image'],
                 'address_id' => $address_id,
                 'province' => $address->province,
                 'city' => $address->city,
@@ -262,7 +220,9 @@ class Goods extends Base
         }
     }
 
-
+    /**
+     * 订单支付
+     */
     public function pay(Request $request)
     {
         if (!$this->user_id) {
@@ -277,7 +237,7 @@ class Goods extends Base
         if (!$pay_type) {
             return JsonError('请选择支付方式');
         }
-        $order = GoodsOrder::where('id', $order_id)
+        $order = Order::where('id', $order_id)
             ->where('order_no', $order_no)
             ->where('user_id', $this->user_id)
             ->where('order_status', 0)
@@ -322,5 +282,132 @@ class Goods extends Base
         }
     }
 
+    /**
+     * 订单列表
+     */
+    public function lists(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+        $page = $request->param('page', 1);
+        $list = Order::where('user_id', $this->user_id)->page($page, 10)->select();
+        $count = Order::where('user_id', $this->user_id)->count();
+        $data = [
+            'list' => $list,
+            'count' => $count
+        ];
+        return JsonSuccess($data);
+    }
+
+    /**
+     * 订单详情
+     */
+    public function detail(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+        $order_id = $request->param('order_id');
+        if (!$order_id) {
+            return JsonError('参数获取失败');
+        }
+        $order = Order::where('id', $order_id)->where('user_id', $this->user_id)->find();
+        if (!$order) {
+            return JsonError('订单获取失败');
+        }
+        if ($order->is_coupon) {
+            $order['coupon_price'] = $order->total_price - $order->pay_price;
+        }
+        $data = [
+            'detail' => $order
+        ];
+        return JsonSuccess($data);
+    }
+
+    /**
+     * 确认收货
+     */
+    public function receipt(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+        $order_id = $request->param('order_id');
+        if (!$order_id) {
+            return JsonError('参数获取失败');
+        }
+        $order = Order::where('id', $order_id)->where('user_id', $this->user_id)->find();
+        if (!$order) {
+            return JsonError('订单获取失败');
+        }
+        if ($order->order_status != 2) {
+            return JsonError('该订单不能确认收货');
+        }
+
+        $order->order_status = 3;
+        if ($order->save()) {
+            return JsonSuccess([], '收货成功');
+        }
+        return JsonError('收货失败');
+    }
+
+    /**
+     * 取消订单
+     */
+    public function cancel(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+        $order_id = $request->param('order_id');
+        if (!$order_id) {
+            return JsonError('参数获取失败');
+        }
+        Db::startTrans();
+        try {
+            $order = Order::where('id', $order_id)->where('user_id', $this->user_id)->find();
+            if (!$order) {
+                return JsonError('订单获取失败');
+            }
+            if ($order->order_status != 1) {
+                return JsonError('该订单不能取消');
+            }
+
+            //给用户退款
+            if ($order->pay_type == 1){
+
+                $wechat = new WeChatPayService();
+                $result = $wechat->Refund('', '', '', '', '');
+                if (!$result) {
+                    return JsonError('退款失败');
+                }
+            }
+            if ($order->pay_type == 2){
+                $user = Users::where('id',$this->user_id)->setInc('balance',$order->pay_price);
+                if (!$user){
+                    return JsonError('退款失败');
+                }
+            }
+            //退还库存
+            GoodsSpec::where('id',$order->spec_id)->setInc('inventory',$order->amount);
+            //归还优惠券
+            Db::name('users_coupon')
+                ->where('coupon_id', $order->coupon_id)
+                ->where('user_id', $this->user_id)->update([
+                    'status' => 0
+                ]);
+            $order->order_status = 4;
+            $order->save();
+            Db::commit();
+            return JsonSuccess([],'取消成功');
+        }catch (Exception $exception){
+            Db::rollback();
+            return JsonError('取消失败');
+        }
+    }
 
 }

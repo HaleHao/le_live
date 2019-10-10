@@ -9,7 +9,6 @@
 namespace App\Service;
 
 
-use Illuminate\Support\Facades\Log;
 
 class WeChatQrService
 {

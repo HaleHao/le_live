@@ -68,12 +68,8 @@ class Menus extends Base
         return JsonSuccess($return);
     }
 
-
-
-
     /**
      * 菜谱详情
-     * Date: 2019/9/17 0017
      */
     public function detail(Request $request)
     {
@@ -158,7 +154,6 @@ class Menus extends Base
         return JsonSuccess($data);
     }
 
-
     /**
      * 收藏
      */
@@ -198,7 +193,6 @@ class Menus extends Base
             return JsonError('收藏失败');
         }
     }
-
 
     /**
      * 喜欢
@@ -245,11 +239,10 @@ class Menus extends Base
         }
     }
 
-
     /**
      * 评论
      */
-    public function comment(Request $request)
+    public function comment_submit(Request $request)
     {
         if (!$this->user_id) {
             return JsonLogin();
@@ -278,6 +271,7 @@ class Menus extends Base
         $comment->user_id = $this->user_id;
         $comment->parent_id = $parent_id;
         $comment->to_user_id = $menu->user_id;
+        $comment->type = 1;
 
         if ($images = $request->param('images')) {
             $comment->images = json_decode($images);
@@ -287,6 +281,47 @@ class Menus extends Base
         }
         return JsonError('评论失败');
 
+    }
+
+    /**
+     * 全部评论
+     */
+    public function comment_list(Request $request)
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $menu_id = $request->param('menu_id');
+        if (!$menu_id){
+            return JsonError('参数获取失败');
+        }
+        $menu = Db::name('menus')->where('id',$menu_id)->find();
+        $list = Db::name('menus_comment')->alias('c')
+            ->join('users u','c.user_id=u.id')
+            ->where('menu_id',$menu_id)
+            ->field(['c.id','c.content','c.images','c.user_id','c.parent_id','c.create_time','c.type','u.avatar','u.nickname'])
+            ->order('create_time','desc')
+            ->select();
+        foreach($list as &$val){
+            $val['images'] = json_decode($val['images'],true);
+            if ($val['images']){
+                foreach ( $val['images'] as &$image){
+                    $image = GetConfig('img_prefix', 'http://www.le-live.com') . $image;
+                }
+            }else{
+                $val['images'] = [];
+            }
+            if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $val['avatar'])) {
+                $val['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['avatar'];
+            }
+            $val['create_time'] = date('Y-m-d H:i:s',$val['create_time']);
+            $val['is_author'] = $val['user_id']==$menu['user_id']?1:0;
+        }
+        $list = ToTree($list,'parent_id');
+        $data = [
+            'list' => $list,
+        ];
+        return JsonSuccess($data);
     }
 
 
@@ -301,7 +336,6 @@ class Menus extends Base
         ];
         return JsonSuccess($data);
     }
-
 
     /**
      * 发布菜品
@@ -357,7 +391,6 @@ class Menus extends Base
             return JsonError('发布失败');
         }
     }
-
 
     /**
      * 发布可预约的菜品
@@ -458,15 +491,15 @@ class Menus extends Base
 
         $arr = Db::name('users_follower')->where('user_id', $this->user_id)->field('id')->select();
         $arr = array_column($arr, 'id');
-        $query = MenusModel::with(['images', 'user'])->whereIn('user_id', $arr);
-        $list = $query->order('create_time', 'desc')
+
+        $list = MenusModel::with(['images', 'user'])->whereIn('user_id', $arr)->order('create_time', 'desc')
             ->order('update_time', 'desc')
             ->order('like_num', 'desc')
             ->order('collect_num', 'desc')
 //            ->field(['id,title,introduce,like_num,collect_num,create_time','user*'])
             ->page($page, 10)
             ->select();
-        $count = $query->count();
+        $count = MenusModel::with(['images', 'user'])->whereIn('user_id', $arr)->count();
 //        $list = UsersFollower::with(['menus' => function($query){
 //            return $query->with('images');
 //        }])->select();
@@ -477,7 +510,6 @@ class Menus extends Base
         ];
         return JsonSuccess($data);
     }
-
 
     /**
      * 提交订单-预览页

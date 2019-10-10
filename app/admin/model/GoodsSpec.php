@@ -13,8 +13,10 @@
 namespace app\admin\model;
 
 use \think\Model;
-class GoodsImage extends BaseModel
+class GoodsSpec extends BaseModel
 {
+    protected $table = 'le_goods_spec';
+
     public function getImageAttr($value)
     {
         return $this->prefixImgUrl($value);

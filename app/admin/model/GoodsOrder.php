@@ -13,9 +13,15 @@
 namespace app\admin\model;
 
 use \think\Model;
-class GoodsImage extends BaseModel
+class GoodsOrder extends BaseModel
 {
-    public function getImageAttr($value)
+
+    public function getCoverImageAttr($value)
+    {
+        return $this->prefixImgUrl($value);
+    }
+
+    public function getSpecImageAttr($value)
     {
         return $this->prefixImgUrl($value);
     }
