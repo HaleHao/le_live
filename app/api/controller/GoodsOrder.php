@@ -11,6 +11,7 @@ namespace app\api\controller;
 use app\admin\model\GoodsOrder as Order;
 use app\admin\model\GoodsSpec;
 use app\admin\model\Users;
+use app\admin\model\WalletLog;
 use app\api\service\WeChatPayService;
 use think\Db;
 use think\Exception;
@@ -205,7 +206,7 @@ class GoodsOrder extends Base
             Db::name('users_coupon')->where('user_id', $this->user_id)->where('coupon_id', $coupon_id)->update([
                 'status' => 1
             ]);
-            $spec->setDec('inventory', $amount);
+            Db::name('goods_spec')->where('id', $spec_id)->setDec('inventory', $amount);
             Db::commit();
             $data = [
                 'order_id' => $order_id,
@@ -255,7 +256,7 @@ class GoodsOrder extends Base
             $notifyUrl = '';
 
             $pay = new WeChatPayService();
-            $result = $pay->Mini_Pay($order['order_no'], $order['pay_price'], $openid, $notifyUrl, '购买菜品');
+            $result = $pay->Mini_Pay($order->order_no, $order->pay_price, $openid, $notifyUrl, '购买菜品');
             if ($result) {
                 return JsonSuccess($result);
             }
@@ -264,15 +265,25 @@ class GoodsOrder extends Base
             //余额支付
             Db::startTrans();
             try {
-                if ($user->balance < $order['pay_price']) {
+                if ($user->balance < $order->pay_price) {
                     return JsonError('您的余额不足');
                 }
-                $user->setDec('balance', $order['pay_price']);
+
+
+                $log = new WalletLog();
+                $log->user_id = $this->user_id;
+                $log->content = '购买配套';
+                $log->money = $order->pay_price;
+                $log->type = 2;
+                $log->save();
+
+                $user->setDec('balance', $order->pay_price);
                 $order->order_status = 1;
                 $order->pay_status = 1;
                 $order->pay_type = 2;
                 $order->pay_time = time();
                 $order->save();
+
                 Db::commit();
                 return JsonSuccess([], '支付成功');
             } catch (Exception $exception) {
@@ -360,9 +371,6 @@ class GoodsOrder extends Base
         if (!$this->user_id) {
             return JsonLogin();
         }
-        if (!$this->user_id) {
-            return JsonLogin();
-        }
         $order_id = $request->param('order_id');
         if (!$order_id) {
             return JsonError('参数获取失败');
@@ -387,7 +395,16 @@ class GoodsOrder extends Base
                 }
             }
             if ($order->pay_type == 2){
+
                 $user = Users::where('id',$this->user_id)->setInc('balance',$order->pay_price);
+
+                $log = new WalletLog();
+                $log->user_id = $this->user_id;
+                $log->content = '配套订单（'.$order->order_no.'）取消';
+                $log->money = $order->pay_price;
+                $log->type = 1;
+                $log->save();
+
                 if (!$user){
                     return JsonError('退款失败');
                 }
@@ -400,8 +417,15 @@ class GoodsOrder extends Base
                 ->where('user_id', $this->user_id)->update([
                     'status' => 0
                 ]);
+
+
+
+
             $order->order_status = 4;
             $order->save();
+
+
+
             Db::commit();
             return JsonSuccess([],'取消成功');
         }catch (Exception $exception){

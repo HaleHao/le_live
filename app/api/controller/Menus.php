@@ -338,12 +338,45 @@ class Menus extends Base
     }
 
     /**
+     * 是否入驻
+     */
+    public function is_enter()
+    {
+        $user = Users::where('id',$this->user_id)->find();
+        $data = [
+            'is_enter' => $user->is_enter
+        ];
+        return JsonSuccess($data);
+    }
+
+
+    /**
+     * 是否认证
+     */
+    public function is_auth()
+    {
+        $user = Users::where('id',$this->user_id)->find();
+        $data = [
+            'is_auth' => $user->is_auth
+        ];
+        return JsonSuccess($data);
+    }
+
+
+    /**
      * 发布菜品
      */
     public function publish(Request $request)
     {
         if (!$this->user_id) {
             return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+        if ($user->is_enter != 1){
+            return JsonError('请先入驻微厨');
         }
         $data = $request->param();
         $validate = new Validate([
@@ -400,8 +433,14 @@ class Menus extends Base
         if (!$this->user_id) {
             return JsonLogin();
         }
-        $user = Users::where('id', $this->user_id)->find();
-        if ($user->is_auth == 0) {
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+        if ($user->is_enter != 1){
+            return JsonError('请先入驻微厨');
+        }
+        if ($user->is_auth != 1) {
             return JsonAuth();
         }
 
@@ -413,7 +452,7 @@ class Menus extends Base
             ['end_time', 'require', '结束时间'],
             ['price', 'require', '请填写价格'],
             ['total_amount', 'require', '请填写总份数'],
-            ['explain', 'require', '请填写微厨想说'],
+//            ['explain', 'require', '请填写微厨想说'],
             ['finish_time', 'require', '请选择菜谱完成后时间'],
         ]);
         if (!$validate->check($data)) {
@@ -449,12 +488,16 @@ class Menus extends Base
             $reserve->finish_time = $data['finish_time'];
 
             if ($is_pick = $request->param('is_pick', 0)) {
-                if ($address_id = $request->param('address_id')) {
-                    $reserve->is_pick = $is_pick;
-                    $reserve->address_id = $address_id;
-                } else {
-                    return JsonError('请选择自提地址');
+//                if ($address_id = $request->param('address_id')) {
+                $address = Address::where('user_id',$this->user_id)->where('type',2)->find();
+                if (!$address){
+                    return JsonError('你没有设置自提地址');
                 }
+                $reserve->is_pick = $is_pick;
+                $reserve->address_id = $address->id;
+//                } else {
+
+//                }
             }
 
             $reserve->save();
@@ -467,6 +510,7 @@ class Menus extends Base
             return JsonSuccess(['id' => $id]);
 
         } catch (Exception $exception) {
+
             Db::rollback();
             return JsonError('提交失败');
         }
@@ -489,21 +533,28 @@ class Menus extends Base
 //            ->page($page,10)->select();
 
 
-        $arr = Db::name('users_follower')->where('user_id', $this->user_id)->field('id')->select();
-        $arr = array_column($arr, 'id');
+        $arr = Db::name('users_follower')->where('user_id', $this->user_id)->field('chef_id')->select();
+        $arr = array_column($arr, 'chef_id');
 
-        $list = MenusModel::with(['images', 'user'])->whereIn('user_id', $arr)->order('create_time', 'desc')
+        $list = MenusModel::with(['images', 'user'])->whereIn('user_id', $arr)
+            ->order('create_time', 'desc')
             ->order('update_time', 'desc')
             ->order('like_num', 'desc')
             ->order('collect_num', 'desc')
 //            ->field(['id,title,introduce,like_num,collect_num,create_time','user*'])
             ->page($page, 10)
             ->select();
+
         $count = MenusModel::with(['images', 'user'])->whereIn('user_id', $arr)->count();
 //        $list = UsersFollower::with(['menus' => function($query){
 //            return $query->with('images');
 //        }])->select();
-
+        foreach ($list as &$val){
+            $like = Db::name('menus_like')->where('user_id',$this->user_id)->where('menu_id',$val['id'])->find();
+            $val['is_like'] = $like?1:0;
+            $collect = Db::name('menus_collect')->where('user_id',$this->user_id)->where('menu_id',$val['id'])->find();
+            $val['is_collect'] = $collect?1:0;
+        }
         $data = [
             'list' => $list,
             'count' => $count
@@ -512,29 +563,22 @@ class Menus extends Base
     }
 
     /**
-     * 提交订单-预览页
+     * 可预约的菜谱
      */
-    public function order_preview(Request $request)
+    public function workable()
     {
-        if (!$this->user_id) {
+        if (!$this->user_id){
             return JsonLogin();
         }
-//        GetConfig('delivery_type');
-        $menu_id = $request->param('menu_id');
-        $menu = MenusModel::where('id', $menu_id)->find();
-        if (!$menu) {
-            return JsonError('菜品获取失败');
-        }
-        if ($menu->user_id == $this->user_id) {
-            return JsonError('不能预约自己的菜品');
-        }
-
-        $address = Address::where('user_id', $this->user_id)->find();
-        $pick_address = Address::where('user_id', $menu->user_id)->find();
-//        $serving_time =
-//        $coupon =
-//
+        $reserve = Db::name('menus_reserve')->where('user_id',$this->user_id)->field('menu_id')->select();
+        $arr = array_column($reserve, 'menu_id');
+        $list = Db::name('menus')
+            ->whereNotIn('id',$arr)
+            ->field(['id', 'title'])
+            ->select();
+        $data = [
+            'list' => $list,
+        ];
+        return JsonSuccess($data);
     }
-
-
 }

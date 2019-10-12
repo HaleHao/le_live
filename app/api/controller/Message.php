@@ -2,6 +2,7 @@
 
 namespace app\api\controller;
 
+use app\admin\model\MenusComment;
 use think\Db;
 use think\Request;
 use app\admin\model\MenusOrder;
@@ -155,6 +156,7 @@ class Message extends Base
 
         foreach ($list as $key => $val)
         {
+            $content = '';
             if ($val['order_status'] == 1){
                 if ($val['chef_id'] == $this->user_id){
                     $content = '订单'.$val['order_no'].'已付款，等待您的发货';
@@ -206,6 +208,44 @@ class Message extends Base
         ];
 
         return JsonSuccess($data);
+
+    }
+
+
+    /**
+     * 消息回复
+     */
+    public function comment_replay(Request $request)
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $comment_id = $request->param('comment_id');
+        if (!$comment_id){
+            return JsonError('参数获取失败');
+        }
+        $comment = Db::name('menus_comment')->where('id',$comment_id)->find();
+        if (!$comment){
+           return JsonError('数据获取失败');
+        }
+
+        $content = $request->param('content');
+        if (!$content){
+            return JsonError('回复内容不能为空');
+        }
+
+
+        $model = new MenusComment();
+        $model->content = $content;
+        $model->menu_id = $comment['menu_id'];
+        $model->user_id = $this->user_id;
+        $model->parent_id = $comment_id;
+        $model->to_user_id = $comment['user_id'];
+        $model->type = 1;
+        if ($model->save()) {
+            return JsonSuccess([], '评论成功');
+        }
+        return JsonError('评论失败');
 
     }
 }

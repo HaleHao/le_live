@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css"  media="all">
+  <link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css" media="all" />
+  <link rel="stylesheet" href="__CSS__/admin.css"  media="all">
+  <style type="text/css">
+    #tooltip{
+      position:absolute;
+      border:1px solid #ccc;
+      background:#333;
+      padding:2px;
+      display:none;
+      color:#fff;
+    }
+</style>
+</head>
+<body id="body">
+  <div class="tplay-body-div"> 
+  <div class="layui-tab">
+    <ul class="layui-tab-title">
+      <li class="layui-this">用户列表</li>
+    </ul>
+  </div>
+  <div class="layui-form-item" style="float: left;">
+    <div class="layui-input-inline">
+      <input type="text" name="gymname" lay-verify="title" autocomplete="off" placeholder="请输入昵称关键字"
+             class="layui-input layui-btn-sm keywords">
+    </div>
+    <button class="layui-btn layui-btn-sm" lay-submit="" id="serch">立即提交</button>
+  </div>
+  <table class="layui-table" lay-size="sm" id="demo"></table>
+  {include file="public/foot"}
+  <script>
+    layui.use(['layer', 'form'], function () {
+      var layer = layui.layer,
+              $ = layui.jquery,
+              form = layui.form;
+    });
+    layui.use('table', function(){
+      var table = layui.table;
+      table.render({
+        elem: '#demo'
+        ,url: "{:url('admin/users/indexall')}"
+        ,method:'post'
+        ,page: true //开启分页
+        ,defaultToolbar: ['filter', 'print', 'exports']
+        ,cols: [[
+          {field: 'nickname', title: '昵称', align: 'center',width:'10%'}
+          ,{field: 'avatar', title: '头像', templet: '#avatar', align: 'center',width:'10%'}
+          ,{field: 'mobile', title: '手机号', align: 'center',width:'10%'}
+          ,{field: 'balance', title: '余额', align: 'center',width:'10%'}
+          ,{field: 'is_enter', title: '是否入住', align: 'center',width:'10%'}
+          ,{field: 'is_auth', title: '是否认证', align: 'center',width:'10%'}
+          ,{field: 'is_partner', title: '是否合伙人', align: 'center',width:'10%'}
+          ,{field: 'promote_qrcode', title: '推广二维码', templet: '#promote_qrcode', align: 'center',width:'10%'}
+          ,{field: 'share_qrcode', title: '分享二维码', templet: '#share_qrcode', align: 'center',width:'10%'}
+          ,{field: 'reg_time', title: '注册时间', align: 'center',width:'10%'}
+        ]]
+      });
+      $('#serch').click(function () {
+        table.reload('demo',{
+          where:{
+            keywords:$('.keywords').val(),
+          },
+        })
+      })
+    });
+  </script>
+  <script type="text/html" id="avatar">
+    <img src="{{d.avatar}}" height="100%" max-height="28px" onclick="show_img('{{d.avatar}}')">
+  </script>
+  <script type="text/html" id="promote_qrcode">
+    <img src="{{d.promote_qrcode}}" height="100%" max-height="28px" onclick="show_img('{{d.promote_qrcode}}')">
+  </script>
+  <script type="text/html" id="share_qrcode">
+    <img src="{{d.share_qrcode}}" height="100%" max-height="28px" onclick="show_img('{{d.share_qrcode}}')">
+  </script>
+  <script>
+    function show_img(t) {
+      var img = new Image();
+      img.src = t;
+      var height = img.height + 50; //获取图片高度
+      var width = img.width; //获取图片宽度
+      var imgHtml = "<img src='" + t + "' />";
+      layer.open({
+        type: 1,
+        shade: 0.8,
+        offset: 'auto',
+        area: [width + 'px',height+'px'],
+        shadeClose:true,//点击外围关闭弹窗
+        scrollbar: false,
+        title: "预览",
+        content: imgHtml,
+        cancel: function () {}
+      });
+    }
+  </script>
+</div>
+</body>
+</html>

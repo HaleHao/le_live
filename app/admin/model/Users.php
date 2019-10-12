@@ -19,4 +19,9 @@ class Users extends BaseModel
     {
         return $this->prefixImgUrl($value);
     }
+
+    public function getAvatarAttr($value)
+    {
+        return $this->prefixImgUrl($value);
+    }
 }

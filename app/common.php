@@ -120,7 +120,7 @@ function JsonLogin($msg='微信未授权',$code=40005,$data=[])
 }
 
 
-function JsonAuth($msg='未缴纳保证金',$code=40006,$data=[])
+function JsonAuth($msg='请先通过审核认证',$code=40006,$data=[])
 {
     $json = [
         'data' => $data,
@@ -129,6 +129,8 @@ function JsonAuth($msg='未缴纳保证金',$code=40006,$data=[])
     ];
     return json($json);
 }
+
+
 
 /**
  * 距离计算

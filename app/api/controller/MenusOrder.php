@@ -5,6 +5,7 @@ namespace app\api\controller;
 
 use app\admin\model\Address;
 use app\admin\model\Admin;
+use app\admin\model\EarningsLog;
 use app\admin\model\Menus as MenusModel;
 use app\admin\model\MenusCollect;
 use app\admin\model\MenusComment;
@@ -13,6 +14,7 @@ use app\admin\model\MenusLike;
 use app\admin\model\MenusReserve;
 use app\admin\model\Users;
 use app\admin\model\UsersFollower;
+use app\admin\model\WalletLog;
 use app\api\service\WeChatPayService;
 use phpDocumentor\Reflection\DocBlockFactory;
 use think\Db;
@@ -361,19 +363,15 @@ class MenusOrder extends Base
         if (!$order) {
             return JsonError('订单获取失败');
         }
-
         $user = Users::where('id', $this->user_id)->find();
         $openid = $user['openid'];
-
-        $notifyUrl = '';
-
+        $notifyUrl = GetConfig('app_url','http://www.le-live.com').'/api/notify';
         $pay = new WeChatPayService();
         $result = $pay->Mini_Pay($order['order_no'], $order['pay_price'], $openid, $notifyUrl, '购买菜品');
         if ($result) {
             return JsonSuccess($result);
         }
         return JsonError('支付订单生成失败');
-
 
     }
 
@@ -825,7 +823,51 @@ class MenusOrder extends Base
                 return JsonError('当前订单不能确认收货');
             }
             $chef = Users::where('id', $order->chef_id)->find();
+
+            //微厨的余额明细
+            $log = new WalletLog();
+            $log->user_id = $order->chef_id;
+            $log->content = '订单（' . $order->order_no . '）';
+            $log->money = $order->pay_price;
+            $log->type = 1;
+            $log->save();
+
+
+            if ($chef->first_user_id) {
+                //一级分销奖励
+                $first_user = Users::where('id', $chef->first_user_id)->find();
+                if ($first_user) {
+                    if ($first_user->is_enter == 1) {
+                        $money = sprintf("%.2f", $order->total_price * (GetConfig('first_order_ratio', 1) / 100));
+                        $log = new EarningsLog();
+                        $log->user_id = $chef->first_user_id;
+                        $log->content = '订单（' . $order->order_no . '）奖励';
+                        $log->type = 2;
+                        $log->status = 1;
+                        $log->money = $money;
+                        $log->save();
+                        $first_user->setInc('store_balance', $money);
+                    }
+                }
+                //二级分销奖励
+                $second_user = Users::where('id', $chef->second_user_id)->find();
+                if ($second_user) {
+                    if ($second_user->is_enter == 1) {
+                        $money = sprintf("%.2f", $order->total_price * (GetConfig('second_order_ratio', 0.5) / 100));
+                        $log = new EarningsLog();
+                        $log->user_id = $chef->second_user_id;
+                        $log->content = '订单（' . $order->order_no . '）奖励';
+                        $log->type = 2;
+                        $log->status = 1;
+                        $log->money = $money;
+                        $log->save();
+                        $second_user->setInc('store_balance', $money);
+                    }
+                }
+            }
+
             $chef->setInc('balance', $order->total_price);
+
             $order->order_status = 4;
             $order->save();
             Db::commit();
@@ -856,6 +898,46 @@ class MenusOrder extends Base
                 return JsonError('当前订单不能确认提货');
             }
             $chef = Users::where('id', $order->chef_id)->find();
+            //微厨的余额明细
+            $log = new WalletLog();
+            $log->user_id = $order->chef_id;
+            $log->content = '订单（' . $order->order_no . '）';
+            $log->money = $order->pay_price;
+            $log->type = 1;
+            $log->save();
+
+            if ($chef->first_user_id) {
+                //一级分销奖励
+                $first_user = Users::where('id', $chef->first_user_id)->find();
+                if ($first_user) {
+                    if ($first_user->is_enter == 1) {
+                        $money = sprintf("%.2f", $order->total_price * (GetConfig('first_order_ratio', 1) / 100));
+                        $log = new EarningsLog();
+                        $log->user_id = $chef->first_user_id;
+                        $log->content = '订单（' . $order->order_no . '）奖励';
+                        $log->type = 2;
+                        $log->status = 1;
+                        $log->money = $money;
+                        $log->save();
+                        $first_user->setInc('store_balance', $money);
+                    }
+                }
+                //二级分销奖励
+                $second_user = Users::where('id', $chef->second_user_id)->find();
+                if ($second_user) {
+                    if ($second_user->is_enter == 1) {
+                        $money = sprintf("%.2f", $order->total_price * (GetConfig('second_order_ratio', 0.5) / 100));
+                        $log = new EarningsLog();
+                        $log->user_id = $chef->second_user_id;
+                        $log->content = '订单（' . $order->order_no . '）奖励';
+                        $log->type = 2;
+                        $log->status = 1;
+                        $log->money = $money;
+                        $log->save();
+                        $second_user->setInc('store_balance', $money);
+                    }
+                }
+            }
             $chef->setInc('balance', $order->total_price);
             $order->order_status = 4;
             $order->save();
@@ -867,7 +949,6 @@ class MenusOrder extends Base
         }
     }
 
-
     /**
      * 已品尝列表
      */
@@ -876,9 +957,9 @@ class MenusOrder extends Base
         if (!$this->user_id) {
             return JsonLogin();
         }
-        $page = $request->param('page', 10);
-        $list = Order::where('order_id', 4)->where('user_id', $this->user_id)->page($page, 10)->select();
-        $count = Order::where('order_id', 4)->where('user_id', $this->user_id)->count();
+        $page = $request->param('page', 1);
+        $list = Order::with('menus')->where('order_status', 4)->where('user_id', $this->user_id)->page($page, 10)->select();
+        $count = Order::with('menus')->where('order_status', 4)->where('user_id', $this->user_id)->count();
 
         $data = [
             'list' => $list,
@@ -908,9 +989,10 @@ class MenusOrder extends Base
         if (!$order_id) {
             return JsonError('订单ID获取失败');
         }
+        Db::startTrans();
         try {
-            $order = Db::name('menus_order')->where('id',$order_id)->find();
-            if (!$order){
+            $order = Db::name('menus_order')->where('id', $order_id)->find();
+            if (!$order) {
                 return JsonError('订单获取失败');
             }
             $menu = MenusModel::where('id', $data['menu_id'])->find();
@@ -935,20 +1017,20 @@ class MenusOrder extends Base
             $comment->save();
 
             //修改详情状态
-            Db::name('menus_order_detail')->where('order_id',$order_id)->where('menu_id',$data['menu_id'])->update([
+            Db::name('menus_order_detail')->where('order_id', $order_id)->where('menu_id', $data['menu_id'])->update([
                 'is_comment' => 1
             ]);
-            Db::name('menus_order')->where('id',$order_id)->update([
+            Db::name('menus_order')->where('id', $order_id)->update([
                 'is_comment' => 1
             ]);
+            Db::commit();
             return JsonSuccess([], '评论成功');
 
         } catch (Exception $exception) {
+            Db::rollback();
             return JsonError('评论失败');
         }
 
-
     }
-    
 
 }

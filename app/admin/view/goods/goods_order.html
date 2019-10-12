@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css"  media="all">
+  <link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css" media="all" />
+  <link rel="stylesheet" href="__CSS__/admin.css"  media="all">
+  <style type="text/css">
+    #tooltip{
+      position:absolute;
+      border:1px solid #ccc;
+      background:#333;
+      padding:2px;
+      display:none;
+      color:#fff;
+    }
+    .timt{width: 300px;}
+    .nowt{margin-left: 110px;}
+    .zt{float: left;width: 100%;}
+    .layui-input{height: 32px;}
+</style>
+</head>
+<body id="body">
+  <div class="tplay-body-div"> 
+  <div class="layui-tab">
+    <ul class="layui-tab-title">
+      <li class="layui-this">商品订单</li>
+    </ul>
+  </div>
+  <div class="layui-form-item zt layui-form">
+    <div class="layui-input-inline">
+      <input type="text" name="gymname" lay-verify="title" autocomplete="off" placeholder="请输入订单号关键字"
+             class="layui-input layui-btn-sm order_no">
+    </div>
+    <div class="layui-input-inline">
+      <input type="text" name="gymname" lay-verify="title" autocomplete="off" placeholder="请输入用户关键字"
+             class="layui-input layui-btn-sm unickname">
+    </div>
+    <div class="layui-input-inline">
+      <input type="text" name="gymname" lay-verify="title" autocomplete="off" placeholder="请输入商品名称关键字"
+             class="layui-input layui-btn-sm goods_name">
+    </div>
+    <div class="layui-input-inline">
+      <div class="layui-inline">
+        <select name="status" class="status" lay-search="">
+          <option value="">订单状态</option>
+          <option value="1">待支付</option>
+          <option value="2">待发货</option>
+          <option value="3">待收货</option>
+          <option value="4">已完成</option>
+          <option value="5">退款</option>
+        </select>
+      </div>
+    </div>
+    <button class="layui-btn layui-btn-sm" lay-submit="" id="serch">立即提交</button>
+  </div>
+  <table class="layui-table" lay-size="sm" id="demo" lay-filter="test"></table>
+  {include file="public/foot"}
+  <script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="detail">查看</a>
+  </script>
+  <script type="text/html" id="cover_image">
+    <img src="{{d.cover_image}}" height="100%" max-height="28px" onclick="show_img('{{d.cover_image}}')">
+  </script>
+  <script>
+    layui.use(['layer', 'form'], function () {
+      var layer = layui.layer,
+              $ = layui.jquery,
+              form = layui.form;
+    });
+    layui.use('table', function(){
+      var table = layui.table;
+      table.render({
+        elem: '#demo'
+        ,url: "{:url('admin/goods/goods_order_all')}"
+        ,method:'post'
+        ,page: true //开启分页
+        ,defaultToolbar: ['filter', 'print', 'exports']
+        ,cols: [[
+          {field: 'order_no', title: '订单号', align: 'center',width:'16%'}
+          ,{field: 'nickname', title: '下单用户', align: 'center',width:'10%'}
+          ,{field: 'goods_name', title: '商品名称', align: 'center',width:'10%'}
+          ,{field: 'cover_image', title: '商品图片', templet: '#cover_image', align: 'center',width:'10%'}
+          ,{field: 'unit_price', title: '单价', align: 'center',width:'8%'}
+          ,{field: 'pay_price', title: '总价', align: 'center',width:'8%'}
+          ,{field: 'pay_type', title: '支付方式', align: 'center',width:'8%'}
+          ,{field: 'order_status', title: '支付状态', align: 'center',width:'10%'}
+          ,{field: 'submit_time', title: '下单时间', align: 'center',width:'10%'}
+          ,{fixed: 'right',title:'操作', width:'10%', align:'center', toolbar: '#barDemo'}
+        ]]
+      });
+      $('#serch').click(function () {
+        table.reload('demo',{
+          where:{
+            order_no:$('.order_no').val(),
+            unickname:$('.unickname').val(),
+            goods_name:$('.goods_name').val(),
+            status:$('.status').val(),
+          },
+        })
+      })
+      //监听工具条
+      table.on('tool(test)', function(obj){
+        var data = obj.data; //获得当前行数据
+        var layEvent = obj.event; //获得 lay-event 对应的值（也可以是表头的 event 参数对应的值）
+        var tr = obj.tr; //获得当前行 tr 的DOM对象
+        if(layEvent === 'detail'){
+          layer.open({
+            type: 2,
+            title: '订单详情',
+            shadeClose: true,
+            area: ['100%', '100%'],
+            content: "{:url('admin/goods/goods_order_detail')}?id=" + data.id,
+            end: function(index, layero){
+              location.reload();
+            }
+          });
+        }
+      });
+    });
+  </script>
+  <script>
+    function show_img(t) {
+      var img = new Image();
+      img.src = t;
+      var height = img.height + 50; //获取图片高度
+      var width = img.width; //获取图片宽度
+      var imgHtml = "<img src='" + t + "' />";
+      layer.open({
+        type: 1,
+        shade: 0.8,
+        offset: 'auto',
+        area: [width + 'px',height+'px'],
+        shadeClose:true,//点击外围关闭弹窗
+        scrollbar: false,
+        title: "预览",
+        content: imgHtml,
+        cancel: function () {}
+      });
+    }
+  </script>
+</div>
+</body>
+</html>

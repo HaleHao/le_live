@@ -19,7 +19,7 @@ class Home extends Base
     {
         $district = $request->param('district');
         //轮播图
-        $banner = Banner::order('sort', 'asc')->order('create_time', 'desc')->field(['image', 'pages'])->select();
+        $banner = Banner::hasWhere('type',1)->order('sort', 'asc')->order('create_time', 'desc')->field(['image', 'pages'])->select();
 
         //栏目
         $column = Column::order('sort', 'asc')->order('Create_time', 'desc')->field(['id', 'image', 'title'])->select();

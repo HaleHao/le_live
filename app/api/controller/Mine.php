@@ -5,6 +5,7 @@ namespace app\api\controller;
 use app\admin\model\MenusImage;
 use app\admin\model\MenusReserve;
 use app\admin\model\Users;
+use app\admin\model\WalletLog;
 use think\Db;
 use think\Exception;
 use think\Request;
@@ -71,6 +72,58 @@ class Mine extends Base
             return JsonSuccess();
         }
         return JsonError();
+    }
+
+
+    /**
+     * 入驻认证
+     */
+    public function auth_submit(Request $request)
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+        if ($user->is_enter != 1){
+            return JsonError('你未入驻');
+        }
+        $card_front = $request->param('card_front');
+        if (!$card_front){
+            return JsonError('请上传身份证正面');
+        }
+        $card_back = $request->param('card_back');
+        if (!$card_back){
+            return JsonError('请上传身份证背面');
+        }
+        $user->card_front = $card_front;
+        $user->card_back = $card_back;
+        $user->is_auth = 0;
+        if ($user->save()){
+            return JsonSuccess([],'提交成功，请等待审核');
+        }
+        return JsonError('提交失败');
+    }
+
+    /**
+     * 入驻详情
+     */
+    public function auth_detail()
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+        $data = [
+            'card_front' => $user->card_front,
+            'card_back' => $user->card_back
+        ];
+        return JsonSuccess($data);
     }
 
     /**
@@ -648,6 +701,36 @@ class Mine extends Base
         ];
 
         return JsonSuccess($data);
+    }
+
+    /**
+     * 钱包提现
+     */
+    public function wallet_withdraw(Request $request)
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+        $money = $request->param('money');
+        if ($money < 1){
+            return JsonError('金额大于1');
+        }
+
+        //TODO 用户提现接口
+
+        $log = new WalletLog();
+        $log->user_id = $this->user_id;
+        $log->content = '提现';
+        $log->money = $money;
+        $log->type = 2;
+        $log->save();
+
+        return JsonSuccess();
+
     }
 
     /**

@@ -17,6 +17,6 @@ class MenusOrder extends BaseModel
 {
     public function menus()
     {
-        return $this->hasMany('MenusOrderDetail','order_id','id')->field(['menu_id','order_id','title','cover_image','amount','unit_price','total_price']);
+        return $this->hasMany('MenusOrderDetail','order_id','id')->field(['menu_id','order_id','title','cover_image','amount','unit_price','total_price','is_comment']);
     }
 }

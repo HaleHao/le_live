@@ -41,5 +41,4 @@ class Menus extends BaseModel
         return $this->prefixImgUrl($value);
     }
 
-
 }
