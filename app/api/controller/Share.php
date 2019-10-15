@@ -214,6 +214,14 @@ class Share extends Base
             $avatar = GetConfig('img_prefix', 'http://www.le-live.com') . $user->avatar;
         }
 
+        if($user->is_partner == 1){
+            $label = '合伙人';
+        }elseif ($user->is_enter == 1){
+            $label = '个体商户';
+        }else{
+            $label = '普通用户';
+        }
+
         $data = [
             'avatar' => $avatar,
             'nickname' => $user->nickname,
@@ -224,6 +232,8 @@ class Share extends Base
             'store_use_num' => $user->store_use_num,
             'store_first_num' => $user->store_first_num,
             'store_second_num' => $user->store_second_num,
+            'label' => $label,
+            'is_partner' => $user->is_partner
         ];
         return JsonSuccess($data);
     }
@@ -241,7 +251,7 @@ class Share extends Base
             return JsonLogin();
         }
         if ($user->is_enter != 1){
-            return JsonError('您没有入驻没有推广二维码');
+            return JsonError('您没有入驻，没有推广二维码',40007);
         }
         $data = [
             'promote_qrcode' => GetConfig('img_prefix', 'http://www.le-live.com') . $user->promote_qrcode,

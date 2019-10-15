@@ -95,7 +95,7 @@ class Menus extends Base
         }
         $chef = Users::where('u.id', $menu->user_id)->alias('u')
             ->join('users_follower f','u.id=f.chef_id and f.user_id='.$this->user_id,'left')
-            ->field(['u.id,u.nickname,u.avatar,u.city,u.signature','u.create_time','f.id as is_follower'])
+            ->field(['u.id,u.nickname,u.avatar,u.city,u.signature','u.create_time','f.id as is_follower','u.credit_line'])
             ->find();
 
         $chef->is_follower = $chef->is_follower?1:0;

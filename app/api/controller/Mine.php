@@ -24,7 +24,7 @@ class Mine extends Base
             return JsonLogin();
         }
 
-        $user = Users::where('id', $this->user_id)->field(['avatar', 'gender', 'nickname', 'skill', 'is_auth', 'follower_num', 'fan_num'])->find();
+        $user = Users::where('id', $this->user_id)->field(['avatar', 'gender', 'nickname', 'skill', 'is_auth', 'follower_num', 'fan_num','is_enter'])->find();
         if (!$user) {
             return JsonLogin();
         }
@@ -33,6 +33,33 @@ class Mine extends Base
         ];
         return JsonSuccess($data);
 
+    }
+
+    /**
+     * 会员权益
+     */
+    public function member_privilege()
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if ($user->is_partner == 1){
+            $store = Db::name('store')->where('type',2)->find();
+        }else{
+            $store = Db::name('store')->where('type',1)->find();
+        }
+        $privilege = Db::name('store_privilege')->where('store_id',$store['id'])->select();
+        foreach ($privilege as &$val){
+            $val['image'] = GetConfig('img_prefix').$val['image'];
+        }
+        $data = [
+            'avatar' => $user->avatar,
+            'nickname' => $user->nickname,
+            'list' => $privilege,
+            'label' => $store['name'],
+        ];
+        return JsonSuccess($data);
     }
 
     /**
@@ -138,15 +165,12 @@ class Mine extends Base
         if (!$user) {
             return JsonLogin();
         }
-        if (!$user->is_auth) {
-            return JsonAuth();
-        }
         $page = $request->param('page');
         $list = Menus::alias('m')
             ->join('menus_reserve r', 'm.id=r.menu_id', 'left')
             ->where('m.user_id', $this->user_id)
             ->order('create_time', 'desc')
-            ->field(['m.create_time', 'm.cover_image', 'm.id', 'm.title', 'm.introduce', 'm.like_num', 'r.price'])->page($page, 10)->select();
+            ->field(['m.create_time', 'm.cover_image', 'm.id', 'm.title', 'm.introduce', 'm.like_num', 'r.price','m.collect_num'])->page($page, 10)->select();
         $count = Menus::where('user_id', $this->user_id)
             ->order('create_time', 'desc')
             ->count();
@@ -168,9 +192,6 @@ class Mine extends Base
         $user = Users::where('id', $this->user_id)->find();
         if (!$user) {
             return JsonLogin();
-        }
-        if (!$user->is_auth) {
-            return JsonAuth();
         }
 
         $menu_id = $request->param('menu_id');
@@ -329,7 +350,7 @@ class Mine extends Base
         $list = Db::name('menus_reserve')->alias('r')
             ->join('menus m', 'r.menu_id=m.id', 'left')
             ->where('m.user_id', $this->user_id)
-            ->field(['m.create_time', 'm.cover_image', 'm.id', 'm.title', 'm.introduce', 'm.like_num', 'r.price'])
+            ->field(['m.create_time', 'm.cover_image', 'r.id', 'm.title', 'm.introduce', 'm.like_num', 'r.price'])
             ->page($page, 10)
             ->select();
 
@@ -359,9 +380,6 @@ class Mine extends Base
         $user = Users::where('id', $this->user_id)->find();
         if (!$user) {
             return JsonLogin();
-        }
-        if (!$user->is_auth) {
-            return JsonAuth();
         }
 
         $reserve_id = $request->param('reserve_id');

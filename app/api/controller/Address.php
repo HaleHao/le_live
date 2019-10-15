@@ -31,7 +31,8 @@ class Address extends Base
 
         $data = [
             'list' => $address,
-            'is_auth' => $user['is_auth']
+            'is_auth' => $user['is_auth'],
+            'is_enter' => $user['is_enter'],
         ];
         return JsonSuccess($data);
     }
@@ -67,7 +68,7 @@ class Address extends Base
             return JsonLogin();
         }
         $user = Users::where('id',$this->user_id)->find();
-        if (!$user->is_auth){
+        if (!$user->is_enter){
             return JsonError('您不是微厨用户');
         }
         $address = Db::name('address')->where('user_id',$this->user_id)->where('type',2)->find();

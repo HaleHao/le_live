@@ -19,13 +19,13 @@ class Home extends Base
     {
         $district = $request->param('district');
         //轮播图
-        $banner = Banner::hasWhere('type',1)->order('sort', 'asc')->order('create_time', 'desc')->field(['image', 'pages'])->select();
+        $banner = Banner::where('type',1)->order('sort', 'asc')->order('create_time', 'desc')->field(['image', 'pages'])->select();
 
         //栏目
         $column = Column::order('sort', 'asc')->order('Create_time', 'desc')->field(['id', 'image', 'title'])->select();
 
         //人气微厨
-        $chef = Users::order('like_num', 'desc')->order('fan_num', 'desc')->field(['id', 'nickname', 'image', 'avatar', 'skill'])->limit(10)->select();
+        $chef = Users::order('like_num', 'desc')->order('fan_num', 'desc')->field(['id', 'nickname', 'image', 'avatar', 'skill','credit_line'])->limit(10)->select();
 
         if ($district) {
             $chef = Users::where('district', 'like', '%' . $district . '%')->order('like_num', 'desc')->order('fan_num', 'desc')->field(['id', 'nickname', 'image', 'avatar'])->limit(10)->select();

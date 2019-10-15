@@ -22,11 +22,10 @@ class Chef extends Base
         $type = $request->param('type', 1);
 
 
-        $query = Db::name('users')->where('is_auth', 1);
-        $list = $query->field(['id,image,nickname,skill,signature'])
+        $list = Db::name('users')->where('is_enter', 1)->field(['id,image,nickname,skill,signature','credit_line'])
             ->page($page, 10)
             ->select();
-        $count = $query->count();
+        $count = Db::name('users')->where('is_enter', 1)->count();
         foreach ($list as $key => &$val) {
             $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
         }
@@ -34,15 +33,17 @@ class Chef extends Base
         if ($type == 1) {
             $longitude = $request->param('longitude');
             $latitude = $request->param('latitude');
-            $query = Db::name('users')->alias('u')
+            $list = Db::name('users')->alias('u')
                 ->join('address a', 'u.id=a.user_id', 'left')
-                ->where('u.is_auth', 1)
-                ->where('a.type', 2);
-            $query1 = clone $query;
-            $list = $query->field(['u.id,u.image,u.nickname,u.skill,u.signature,a.longitude,a.latitude'])
+                ->where('u.is_enter', 1)
+                ->where('a.type', 2)
+                ->field(['u.id,u.image,u.nickname,u.skill,u.signature,a.longitude,a.latitude,u.credit_line'])
                 ->page($page, 10)
                 ->select();
-            $count = $query1->count();
+            $count = Db::name('users')->alias('u')
+                ->join('address a', 'u.id=a.user_id', 'left')
+                ->where('u.is_enter', 1)
+                ->where('a.type', 2)->count();
             $to = [$longitude, $latitude];
             foreach ($list as $key => &$val) {
                 $form = [$val['longitude'], $val['latitude']];
@@ -53,14 +54,13 @@ class Chef extends Base
             array_multisort($distance, SORT_ASC, $list);
         }
         if ($type == 2) {
-            $query = Db::name('users')->where('is_auth', 1)
+            $list = Db::name('users')->where('is_enter', 1)
                 ->order('like_num', 'desc')
                 ->order('fan_num', 'desc')
-                ->order('create_time', 'desc');
-            $list = $query->field(['id,image,nickname,skill,signature'])
+                ->order('create_time', 'desc')->field(['id,image,nickname,skill,signature','credit_line'])
                 ->page($page, 10)
                 ->select();
-            $count = $query->count();
+            $count = Db::name('users')->where('is_enter', 1)->count();
             foreach ($list as $key => &$val) {
                 $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
             }
@@ -237,9 +237,9 @@ class Chef extends Base
         }
         Db::startTrans();
         try {
-            //TODO 判断是否关注
+            //
             $follower = UsersFollower::where('user_id', $this->user_id)->where('chef_id', $chef_id)->find();
-            if ($follower) {
+            if (!$follower) {
                 $follower = new UsersFollower();
                 $follower->user_id = $this->user_id;
                 $follower->chef_id = $chef_id;
