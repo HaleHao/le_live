@@ -168,7 +168,7 @@ class Chef extends Base
             ->where('r.serving_date', '>', date('Y-m-d', time()))
             ->where('r.total_amount', '>', 0)
             ->count();
-
+        
         $longitude = $request->param('longitude');
         $latitude = $request->param('latitude');
 

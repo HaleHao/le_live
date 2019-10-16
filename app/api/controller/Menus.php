@@ -342,7 +342,13 @@ class Menus extends Base
      */
     public function is_enter()
     {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
         $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
         $data = [
             'is_enter' => $user->is_enter
         ];
@@ -355,7 +361,13 @@ class Menus extends Base
      */
     public function is_auth()
     {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
         $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
         $data = [
             'is_auth' => $user->is_auth
         ];
@@ -503,14 +515,15 @@ class Menus extends Base
             $reserve->save();
             $id = $reserve->getLastInsID();
 
-            $menu = MenusModel::where('id', $data['menu_id'])->where('user_id', $this->user_id)->find();
-            $menu->is_reserve = 1;
-            $menu->save();
+//            $menu = MenusModel::where('id', $data['menu_id'])->where('user_id', $this->user_id)->find();
+//            $menu->is_reserve = 1;
+//            $menu->save();
             Db::commit();
             return JsonSuccess(['id' => $id]);
 
         } catch (Exception $exception) {
-
+            var_dump($exception);
+            exit;
             Db::rollback();
             return JsonError('提交失败');
         }

@@ -19,11 +19,11 @@ class WeChatPayService
     //提现接口哦
     protected $transfers = 'https://api.mch.weixin.qq.com/mmpaymkttransfers/promotion/transfers';
     //商户密钥
-    protected $key = 'poiuytgnbvcdxsfrewfbglkiujm12368';
+    protected $key = 'fnR8NbPlqZ9DtGQteyRwcFRsjMcpoek4';
     //微信Appid
-    protected $app_id = 'wxdadaa1493ebcd7bf';
+    protected $app_id = 'wxc7811d73da68c79e';
     //微信商户号
-    protected $mch_id = '1536924251';
+    protected $mch_id = '1491703102';
     //证书路径(Ps：主要用户退款，提现)
     protected $SSLCERT_PATH = 'Service/Cert/apiclient_cert.pem';
     //证书路径
@@ -32,11 +32,11 @@ class WeChatPayService
 
     public function __construct()
     {
-        $this->app_id = config('appid') ? config('appid') : $this->app_id;
-        $this->mch_id = config('mch_id') ? config('mch_id') : $this->mch_id;
-        $this->key = config('key') ? config('key') : $this->key;
-        $this->SSLCERT_PATH = config('apiclient_cert') ? config('apiclient_cert') : $this->key;
-        $this->SSLKEY_PATH = config('apiclient_key') ? config('apiclient_key') : $this->key;
+//        $this->app_id = config('appid') ? config('appid') : $this->app_id;
+//        $this->mch_id = config('mch_id') ? config('mch_id') : $this->mch_id;
+//        $this->key = config('key') ? config('key') : $this->key;
+//        $this->SSLCERT_PATH = config('apiclient_cert') ? config('apiclient_cert') : $this->key;
+//        $this->SSLKEY_PATH = config('apiclient_key') ? config('apiclient_key') : $this->key;
 
     }
 
@@ -237,19 +237,19 @@ class WeChatPayService
      * Date: 2019/5/31 0031
      * 退款（Ps:退款可以用商家自己生成的地址，也可以用微信支付的流水号）
      */
-    public function Refund($transaction_id, $out_refund_no, $total_fee,$refund_desc,$notifyUrl='')
+    public function Refund($out_refund_no, $total_fee,$refund_desc)
     {
         $refund = [
             'appid' => $this->app_id,
             'mch_id' => $this->mch_id,
             'nonce_str' => $this->nonce_str(),
             'sign_type' => 'MD5',
-            'transaction_id' => $transaction_id,//微信订单号
+//            'transaction_id' => $transaction_id,//微信订单号
             'refund_desc' => $refund_desc,//退款说明
             'out_refund_no' => $out_refund_no,//商家订单号
             'total_fee' => intval($total_fee * 100),
             'refund_fee' => intval($total_fee * 100),
-            'notify_url' => $notifyUrl//回调地址
+//            'notify_url' => $notifyUrl//回调地址
         ];
         //添加签名
         $refund['sign'] = $this->getSign($refund);
@@ -305,8 +305,6 @@ class WeChatPayService
         }
         return false;
     }
-
-
 
 
 

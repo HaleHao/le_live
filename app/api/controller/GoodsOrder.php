@@ -253,7 +253,7 @@ class GoodsOrder extends Base
 
             $openid = $user['openid'];
 
-            $notifyUrl = '';
+            $notifyUrl = GetConfig('app_url','http://www.le-live.com').'/api/notify/wechat';
 
             $pay = new WeChatPayService();
             $result = $pay->Mini_Pay($order->order_no, $order->pay_price, $openid, $notifyUrl, '购买菜品');
@@ -389,7 +389,7 @@ class GoodsOrder extends Base
             if ($order->pay_type == 1){
 
                 $wechat = new WeChatPayService();
-                $result = $wechat->Refund('', '', '', '', '');
+                $result = $wechat->Refund($order->order_no, $order->pay_price, '取消订单');
                 if (!$result) {
                     return JsonError('退款失败');
                 }

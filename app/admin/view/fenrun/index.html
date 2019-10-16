@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css"  media="all">
+  <link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css" media="all" />
+  <link rel="stylesheet" href="__CSS__/admin.css"  media="all">
+  <style type="text/css">
+    #tooltip{
+      position:absolute;
+      border:1px solid #ccc;
+      background:#333;
+      padding:2px;
+      display:none;
+      color:#fff;
+    }
+    .timt{width: 300px;}
+    .nowt{margin-left: 110px;}
+    .zt{float: left;width: 100%;}
+    .layui-input{height: 32px;}
+</style>
+</head>
+<body id="body">
+  <div class="tplay-body-div"> 
+  <div class="layui-tab">
+    <ul class="layui-tab-title">
+      <li class="layui-this">分润列表</li>
+    </ul>
+  </div>
+  <div class="layui-form-item" style="float: left;">
+    <div class="layui-input-inline">
+      <input type="text" lay-verify="title" autocomplete="off" placeholder="请输入用户关键词" class="layui-input layui-btn-sm keywords">
+    </div>
+    <div class="layui-input-inline">
+      <div class="layui-inline">
+        <div class="layui-input-inline">
+          <input type="text" class="layui-input create_time" id="test1" placeholder="创建时间" placeholder="yyyy-MM-dd">
+        </div>
+      </div>
+    </div>
+    <button class="layui-btn layui-btn-sm" lay-submit="" id="serch">立即提交</button>
+  </div>
+  <table class="layui-table" lay-size="sm" id="demo" lay-filter="test"></table>
+  {include file="public/foot"}
+  <script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="detail">编辑</a>
+  </script>
+  <script>
+    layui.use(['table','laydate'], function(){
+      var table = layui.table,
+          laydate = layui.laydate;
+      laydate.render({
+        elem: '#test1'
+      });
+      table.render({
+        elem: '#demo'
+        ,url: "{:url('admin/fenrun/index_all')}"
+        ,method:'post'
+        ,page: true //开启分页
+        ,defaultToolbar: ['filter', 'print', 'exports']
+        ,cols: [[
+          {field: 'nickname', title: '用户', align: 'center',width:'20%'}
+          ,{field: 'total_turnover', title: '累计营业额', align: 'center',width:'20%'}
+          ,{field: 'day_turnover', title: '当日营业额', align: 'center',width:'20%'}
+          ,{field: 'profit', title: '当日利润', align: 'center',width:'20%'}
+          ,{field: 'create_time', title: '创建时间', align: 'center',width:'20%'}
+        ]]
+      });
+      $('#serch').click(function () {
+        table.reload('demo',{
+          where:{
+            keywords:$('.keywords').val(),
+            create_time:$('.create_time').val(),
+          },
+        })
+      })
+    });
+  </script>
+</div>
+</body>
+</html>

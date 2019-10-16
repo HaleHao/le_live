@@ -6,6 +6,7 @@ use app\admin\model\Admin;
 use app\admin\model\Banner;
 use app\admin\model\MenusComment;
 use app\admin\model\StoreCode;
+use app\admin\model\StoreOrder;
 use app\admin\model\Users;
 use app\api\service\WeChatPayService;
 use think\Db;
@@ -109,6 +110,7 @@ class Share extends Base
                 'pay_status' => 0,
                 'store_id' => $store_id,
                 'store_name' => $store['name'],
+                'store_type' => $store['type'],
                 'amount' => $amount,
                 'unit_price' => $store['price'],
                 'total_price' => $store['price'] * $amount,
@@ -165,7 +167,8 @@ class Share extends Base
         if (!$this->user_id) {
             return JsonLogin();
         }
-        if (!$this->user_id) {
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
             return JsonLogin();
         }
         $order_no = $request->param('order_no');
@@ -173,8 +176,7 @@ class Share extends Base
         if (!$order_no || !$order_id) {
             return JsonError('参数获取失败');
         }
-        $order = Db::name('store_order')
-            ->where('id', $order_id)
+        $order = StoreOrder::where('id', $order_id)
             ->where('order_no', $order_no)
             ->where('user_id', $this->user_id)
             ->where('order_status', 0)
@@ -184,13 +186,11 @@ class Share extends Base
             return JsonError('订单获取失败');
         }
 
-        $user = Users::where('id', $this->user_id)->find();
-        $openid = $user['openid'];
-
-        $notifyUrl = GetConfig('');
+        $notifyUrl = 'https://lelivepro.zx-xcx.com/api/notify/wechat';
 
         $pay = new WeChatPayService();
-        $result = $pay->Mini_Pay($order['order_no'], $order['pay_price'], $openid, $notifyUrl, '购买菜品');
+        $body = '购买'.$order->store_name;
+        $result = $pay->Mini_Pay($order->order_no,$order->pay_price,$user->openid,$notifyUrl,$body);
         if ($result) {
             return JsonSuccess($result);
         }
@@ -379,10 +379,18 @@ class Share extends Base
         if (!$this->user_id){
             return JsonLogin();
         }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
 
         $money = $request->param('money');
         if ($money <= 1){
             return JsonError('金额不能少于1');
+        }
+
+        if ($money > $user->store_balance){
+            return JsonError('余额不足');
         }
 
         $type = $request->param('type');
@@ -439,6 +447,7 @@ class Share extends Base
             'status' => 0
         ];
         $id = Db::name('withdraw')->insertGetId($data);
+        $user->setDec('store_balance',$money);
         if ($id){
             return JsonSuccess();
         }

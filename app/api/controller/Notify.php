@@ -6,25 +6,26 @@ namespace app\api\controller;
 use app\admin\model\EarningsLog;
 use app\admin\model\StoreOrder;
 use app\admin\model\Users;
-use think\Db;
 use think\Exception;
-use think\Request;
 use app\admin\model\MenusOrder;
 use app\admin\model\GoodsOrder;
 
 class Notify extends Base
 {
-
-    public function index()
+    //TODO 微信支付回调
+    public function wechat()
     {
 //        $data = file_get_contents("php://input");
 //        $data = $this->XmlToArr($data);
+
         $data = [
             'return_code' => 'SUCCESS',
             'result_code' => 'SUCCESS',
-            'out_trade_no' => '2019101017263596431',
-            'total_fee' => '9900'
+            'out_trade_no' => '2019101415273960514',
+            'total_fee' => 9900,
         ];
+
+
         if ($data['return_code'] == 'SUCCESS' && $data['result_code'] == 'SUCCESS') {
 
             $out_trade_no = $data['out_trade_no']; //订单编号
@@ -60,7 +61,6 @@ class Notify extends Base
                 $store_order = StoreOrder::where('order_no', $out_trade_no)->where('pay_price', $total_fee)->find();
                 if ($store_order) {
                     $user = Users::where('id', $store_order->user_id)->find();
-
                     //个体商户
                     if ($store_order->store_type == 1) {
                         //如果入驻的话，直接增加店铺数量
@@ -69,9 +69,9 @@ class Notify extends Base
                             $user->setInc('store_residue_num', $store_order->amount);
                         } else {
                             $user->is_enter = 1;
-                            $user->save();
                             $user->setInc('store_total_num', $store_order->amount - 1);
                             $user->setInc('store_residue_num', $store_order->amount - 1);
+                            $user->save();
                         }
                         //合伙人
                     } else {
@@ -111,6 +111,14 @@ class Notify extends Base
                                         $second_user->setInc('store_balance', GetConfig('second_partner_bonus', 2000));
                                     }
                                 }
+                                //TODO 查询上级的partner_id(合伙人ID)将数据存进用户表里
+                                $partner_id = $this->GetUpPartnerID($user->id);
+                                if ($partner_id){
+                                    $user->partner_id = $partner_id;
+                                }
+
+                                //TODO 查询下级的合伙人将ID修改成我的ID
+
                             }
                             $user->is_enter = 1;
                             $user->is_partner = 1;
@@ -131,6 +139,32 @@ class Notify extends Base
             }
         }
     }
+
+
+    //TODO 查询上一级的partner_id
+    public function GetUpPartnerID($id)
+    {
+        $user = Users::where('id',$id)->find();
+        if ($user->is_partner == 1){
+            return $user->id;
+        }else{
+            $partner_id = $this->GetUpPartnerID($user->first_user_id);
+            return $partner_id;
+        }
+    }
+
+    //TODO 查询下一级的用户并修改用户对应的partner_id
+    public function GetDownPartnerID($id)
+    {
+        $users = Users::where('first_user_id',$id)->select();
+        foreach($users as $val){
+            
+        }
+    }
+
+
+
+
 
     //转换xml
     public function arrayToXml($arr)

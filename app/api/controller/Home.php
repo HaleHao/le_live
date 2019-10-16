@@ -25,7 +25,7 @@ class Home extends Base
         $column = Column::order('sort', 'asc')->order('Create_time', 'desc')->field(['id', 'image', 'title'])->select();
 
         //人气微厨
-        $chef = Users::order('like_num', 'desc')->order('fan_num', 'desc')->field(['id', 'nickname', 'image', 'avatar', 'skill','credit_line'])->limit(10)->select();
+        $chef = Users::where('is_enter',1)->order('like_num', 'desc')->order('fan_num', 'desc')->field(['id', 'nickname', 'image', 'avatar', 'skill','credit_line'])->limit(10)->select();
 
         if ($district) {
             $chef = Users::where('district', 'like', '%' . $district . '%')->order('like_num', 'desc')->order('fan_num', 'desc')->field(['id', 'nickname', 'image', 'avatar'])->limit(10)->select();

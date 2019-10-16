@@ -15,6 +15,7 @@ use app\admin\model\MenusReserve;
 use app\admin\model\Users;
 use app\admin\model\UsersFollower;
 use app\admin\model\WalletLog;
+use app\api\service\UUDeliveryService;
 use app\api\service\WeChatPayService;
 use phpDocumentor\Reflection\DocBlockFactory;
 use think\Db;
@@ -334,6 +335,8 @@ class MenusOrder extends Base
 
             return JsonSuccess($data);
         } catch (Exception $exception) {
+    //            var_dump($exception);
+    //            exit;
             Db::rollback();
             return JsonError('订单生成失败');
         }
@@ -365,7 +368,7 @@ class MenusOrder extends Base
         }
         $user = Users::where('id', $this->user_id)->find();
         $openid = $user['openid'];
-        $notifyUrl = GetConfig('app_url','http://www.le-live.com').'/api/notify';
+        $notifyUrl = GetConfig('app_url','http://www.le-live.com').'/api/notify/wechat';
         $pay = new WeChatPayService();
         $result = $pay->Mini_Pay($order['order_no'], $order['pay_price'], $openid, $notifyUrl, '购买菜品');
         if ($result) {
@@ -504,11 +507,26 @@ class MenusOrder extends Base
         if ($order->order_status != 1) {
             return JsonError('当前订单不能发货');
         }
-        $order->order_status = 2;
-
         //对接UU配送
+        $delivery = new UUDeliveryService();
+        //获取价格
+        $price_token = $delivery->GetOrderPrice($order);
+        if (!$price_token){
+            return JsonError('订单配送费计算失败');
+        }
+        if ($price_token['return_code'] != 'ok' ){
+            return JsonError($price_token['return_msg']);
+        }
 
-
+        $result = $delivery->AddOrder($order,$price_token);
+        if (!$result){
+            return JsonError('发布配送订单失败');
+        }
+        if ($result['return_code'] != 'ok'){
+            return JsonError($price_token['return_msg']);
+        }
+        $order->order_code = $result['ordercode'];
+        $order->order_status = 2;
         if ($order->save()) {
             return JsonSuccess([], '发货成功');
         }
@@ -517,121 +535,6 @@ class MenusOrder extends Base
     }
 
     //uu配送
-    public function UUDelivery($order_id)
-    {
-        header("Content-type: text/html; charset=utf-8");
-
-        $guid = str_replace('-', '', guid());
-
-        $appid = 'b099c26b5c4549c0a147e84c86038c1a';
-        $appKey = 'a8268513b79a4444a11899e315067d19';
-// 远程地址
-        $url = "http://openapi.uupaotui.com/v2_0/binduserapply.ashx";
-// POST数据
-//        $data = array(
-//            'appid'       => $appid,
-//            'nonce_str'   => strtolower($guid),
-//            'timestamp'   => time(),
-//            'user_mobile' => '13700000000',
-//            'user_ip'     => '192.168.1.66'
-//        );
-        $order = Order::where('id',$order_id)->find();
-        print_r($order);
-        $data = [
-            'origin_id' => $order->id,
-            'from_address' => '',
-            'from_usernote' => '',
-            'to_address' => '',
-            'to_usernote' => '',
-            'city_name' => '',
-            'subscribe_type' => '',
-            'send_type' => 0,
-            'to_lat' => '',
-            'to_lng' => '',
-            'from_lat' => '',
-            'from_lng' => '',
-            'nonce_str' => '',
-            'timestamp' => time(),
-            'openid' => '9a88e9152c224c98aa737fa13cbbbc8a',
-            'appid' => $appid,
-        ];
-
-        ksort($data);
-        $data['sign'] = sign($data, $appKey);
-
-//var_dump($data);
-
-        $res = request_post($url, $data);
-
-        echo '<br />';
-
-        var_dump($res);
-    }
-
-
-    /**
-     * 发起http post请求
-     */
-    function request_post($url = '', $post_data = array()) {
-        if (empty($url) || empty($post_data)) {
-            return false;
-        }
-
-        $arr = [];
-        foreach ($post_data as $key => $value) {
-            $arr[] = $key.'='.$value;
-        }
-
-        $curlPost = implode('&', $arr);
-
-        var_dump($arr);
-        echo '<br />';
-        var_dump('签名后:'.$curlPost);
-
-        $postUrl = $url;
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL,$postUrl);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $curlPost);
-        $data = curl_exec($ch);
-        curl_close($ch);
-
-        return $data;
-    }
-
-    // 生成guid
-    function guid(){
-        if (function_exists('com_create_guid')){
-            return com_create_guid();
-        }else{
-            mt_srand((double)microtime()*10000);//optional for php 4.2.0 and up.
-            $charid = strtoupper(md5(uniqid(rand(), true)));
-            $hyphen = chr(45);// "-"
-            $uuid = substr($charid, 0, 8).$hyphen
-                .substr($charid, 8, 4).$hyphen
-                .substr($charid,12, 4).$hyphen
-                .substr($charid,16, 4).$hyphen
-                .substr($charid,20,12);
-            return $uuid;
-        }
-    }
-
-    // 生成签名
-    function sign($data, $appKey) {
-        $arr = [];
-        foreach ($data as $key => $value) {
-            $arr[] = $key.'='.$value;
-        }
-
-        $arr[] = 'key='.$appKey;
-        $str = strtoupper(implode('&', $arr));
-        //$str = http_build_query($arr, '&');
-        var_dump('签名前:'.$str);
-        echo "<br />";
-        return strtoupper(md5($str));
-    }
 
     /**
      * 我卖出的取消订单
@@ -665,9 +568,12 @@ class MenusOrder extends Base
             //TODO 给用户退款
             $wechat = new WeChatPayService();
 
-
             //提前一天取消免责 否则扣除信誉度
+            $res = $wechat->Refund($order->order_no,$order->pay_price,'取消订单');
 
+            if (!$res){
+                return JsonError('退款失败');
+            }
 
             if ($order->serving_date >= date("Y-m-d H:i", strtotime("+1 day"))) {
                 //免责
@@ -679,8 +585,6 @@ class MenusOrder extends Base
                 return JsonError('该订单超过时间不能取消');
             }
 
-//            $result = $wechat->Refund($order->pay_no,$order->order_no,$order->pay_price,'预约订单取消','');
-//            if ($result){
             if ($order->coupon_id) {
                 //归还优惠券
                 Db::name('users_coupon')
@@ -852,6 +756,13 @@ class MenusOrder extends Base
 
             Db::startTrans();
             try {
+
+                $wechat = new WeChatPayService();
+                $res = $wechat->Refund($order->order_no,$order->pay_price,'取消订单');
+                if (!$res){
+                    return JsonError('退款失败');
+                }
+
                 if ($order->coupon_id) {
                     //归还优惠券
                     Db::name('users_coupon')->where('coupon_id', $order->coupon_id)->where('user_id', $this->user_id)->update([
