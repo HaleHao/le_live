@@ -5,6 +5,7 @@ namespace app\api\controller;
 
 use app\admin\model\Address;
 use app\admin\model\Admin;
+use app\admin\model\CreditLog;
 use app\admin\model\EarningsLog;
 use app\admin\model\Menus as MenusModel;
 use app\admin\model\MenusCollect;
@@ -71,6 +72,11 @@ class MenusOrder extends Base
             ->where('user_id', $menu['user_id'])
             ->where('type', 2)
             ->find();
+        if (!$pick_address) {
+            $is_pick = 0;
+        } else {
+            $is_pick = $pick_address['is_pick'];
+        }
 
         $coupon_id = $request->param('coupon_id');
         $coupon = '';
@@ -90,7 +96,7 @@ class MenusOrder extends Base
         }
 
         $num = ($end_min - $start_min) * 2 + 1;
-
+        $arr1 = [];
         for ($i = 0; $i < $num; $i++) {
             $e = strtotime($start_min) + (($i + 1) * 1800);
             if (date("H:i", $e) <= date('H:i', strtotime($end_min) + 1800)) {
@@ -114,8 +120,12 @@ class MenusOrder extends Base
             'serving_tme' => $arr1,
 
             'serving_date' => $menu['serving_date'],
+
             'start_date' => $start_min,
+
             'end_date' => $end_min,
+
+            'is_pick' => $is_pick,
         ];
 
         return JsonSuccess($data);
@@ -151,7 +161,7 @@ class MenusOrder extends Base
     }
 
     /**
-     * TODO 提单提交
+     * 提单提交
      */
     public function submit(Request $request)
     {
@@ -162,6 +172,7 @@ class MenusOrder extends Base
         if (!$menu_ids) {
             return JsonError('参数获取失败');
         }
+
         //提交订单
 
         Db::startTrans();
@@ -177,9 +188,12 @@ class MenusOrder extends Base
                 if ($val['amount'] > $menu['total_amount']) {
                     return JsonError('菜品库存不足');
                 }
+
+                if ($menu['user_id'] == $this->user_id){
+                    return JsonError('不能预约自己的菜品');
+                }
                 $menus[] = $menu;
                 $price += $menu['price'] * $val['amount'];
-
             }
             $total_price = $price;
 
@@ -244,8 +258,9 @@ class MenusOrder extends Base
 
             $serving_date = date('H:i', strtotime($serving_time));
             $serving_month = date('Y-m-d', strtotime($serving_time));
+            $end_min1 = date('H:i', strtotime($end_min)+(30*60));
 
-            if ($serving_date < $start_min || $serving_date > $end_min) {
+            if ($serving_date < $start_min || $serving_date > $end_min1) {
                 return JsonError('送达时间选择错误');
             }
 
@@ -335,13 +350,10 @@ class MenusOrder extends Base
 
             return JsonSuccess($data);
         } catch (Exception $exception) {
-    //            var_dump($exception);
-    //            exit;
             Db::rollback();
             return JsonError('订单生成失败');
         }
     }
-
 
     /**
      * 订单支付
@@ -368,7 +380,7 @@ class MenusOrder extends Base
         }
         $user = Users::where('id', $this->user_id)->find();
         $openid = $user['openid'];
-        $notifyUrl = GetConfig('app_url','http://www.le-live.com').'/api/notify/wechat';
+        $notifyUrl = GetConfig('app_url') . '/api/notify/wechat';
         $pay = new WeChatPayService();
         $result = $pay->Mini_Pay($order['order_no'], $order['pay_price'], $openid, $notifyUrl, '购买菜品');
         if ($result) {
@@ -377,7 +389,6 @@ class MenusOrder extends Base
         return JsonError('支付订单生成失败');
 
     }
-
 
     /**
      * 我卖出的
@@ -489,7 +500,7 @@ class MenusOrder extends Base
     }
 
     /**
-     * TODO 确认发货 对接UU配送
+     * 确认发货 对接UU配送
      */
     public function sell_deliver(Request $request)
     {
@@ -511,18 +522,18 @@ class MenusOrder extends Base
         $delivery = new UUDeliveryService();
         //获取价格
         $price_token = $delivery->GetOrderPrice($order);
-        if (!$price_token){
+        if (!$price_token) {
             return JsonError('订单配送费计算失败');
         }
-        if ($price_token['return_code'] != 'ok' ){
+        if ($price_token['return_code'] != 'ok') {
             return JsonError($price_token['return_msg']);
         }
 
-        $result = $delivery->AddOrder($order,$price_token);
-        if (!$result){
+        $result = $delivery->AddOrder($order, $price_token);
+        if (!$result) {
             return JsonError('发布配送订单失败');
         }
-        if ($result['return_code'] != 'ok'){
+        if ($result['return_code'] != 'ok') {
             return JsonError($price_token['return_msg']);
         }
         $order->order_code = $result['ordercode'];
@@ -534,11 +545,8 @@ class MenusOrder extends Base
 
     }
 
-    //uu配送
-
     /**
      * 我卖出的取消订单
-     *  TODO 给用户退款
      */
     public function sell_cancel(Request $request)
     {
@@ -569,9 +577,9 @@ class MenusOrder extends Base
             $wechat = new WeChatPayService();
 
             //提前一天取消免责 否则扣除信誉度
-            $res = $wechat->Refund($order->order_no,$order->pay_price,'取消订单');
+            $res = $wechat->Refund($order->order_no, $order->pay_price, '取消订单');
 
-            if (!$res){
+            if (!$res) {
                 return JsonError('退款失败');
             }
 
@@ -579,6 +587,14 @@ class MenusOrder extends Base
                 //免责
 
             } elseif ($order->serving_date >= date('Y-m-d H:i', strtotime("+6 hour"))) {
+
+                $log = new CreditLog();
+                $log->user_id = $this->user_id;
+                $log->content = '取消订单('.$order->order_no.')';
+                $log->number = (int)$order->pay_price / 10;
+                $log->type = 2;
+                $log->save();
+
                 $user->setDec('credit_line', (int)$order->pay_price / 10);
                 $user->save();
             } else {
@@ -622,7 +638,6 @@ class MenusOrder extends Base
         }
     }
 
-
     /**
      * 我预约的-列表
      */
@@ -641,6 +656,7 @@ class MenusOrder extends Base
             $list = Order::with('menus')
                 ->where('user_id', $this->user_id)
                 ->where('order_status', 0)
+                ->order('create_time', 'desc')
                 ->field(['id', 'order_no', 'order_status', 'pay_price', 'total_price', 'preferential_price'])
                 ->page($page, 10)->select();
             $count = Order::where('user_id', $this->user_id)
@@ -652,6 +668,7 @@ class MenusOrder extends Base
             $list = Order::with('menus')
                 ->where('user_id', $this->user_id)
                 ->where('order_status', 1)
+                ->order('create_time', 'desc')
                 ->field(['id', 'order_no', 'order_status', 'pay_price', 'total_price', 'preferential_price'])
                 ->page($page, 10)->select();
             $count = Order::where('user_id', $this->user_id)
@@ -663,6 +680,7 @@ class MenusOrder extends Base
             $list = Order::with('menus')
                 ->where('user_id', $this->user_id)
                 ->where('order_status', 2)
+                ->order('create_time', 'desc')
                 ->field(['id', 'order_no', 'order_status', 'pay_price', 'total_price', 'preferential_price'])
                 ->page($page, 10)->select();
             $count = Order::where('user_id', $this->user_id)
@@ -674,6 +692,7 @@ class MenusOrder extends Base
             $list = Order::with('menus')
                 ->where('user_id', $this->user_id)
                 ->where('order_status', 5)
+                ->order('create_time', 'desc')
                 ->field(['id', 'order_no', 'order_status', 'pay_price', 'total_price', 'preferential_price'])
                 ->page($page, 10)->select();
             $count = Order::where('user_id', $this->user_id)
@@ -686,6 +705,7 @@ class MenusOrder extends Base
             $list = Order::with('menus')
                 ->where('user_id', $this->user_id)
                 ->where('order_status', 3)
+                ->order('create_time', 'desc')
                 ->field(['id', 'order_no', 'order_status', 'pay_price', 'total_price', 'preferential_price'])
                 ->page($page, 10)->select();
             $count = Order::where('user_id', $this->user_id)
@@ -734,7 +754,6 @@ class MenusOrder extends Base
 
     /**
      * 我预约的-取消
-     * TODO 给用户退款
      */
     public function buy_cancel(Request $request)
     {
@@ -757,11 +776,8 @@ class MenusOrder extends Base
             Db::startTrans();
             try {
 
-                $wechat = new WeChatPayService();
-                $res = $wechat->Refund($order->order_no,$order->pay_price,'取消订单');
-                if (!$res){
-                    return JsonError('退款失败');
-                }
+//                $wechat = new WeChatPayService();
+//
 
                 if ($order->coupon_id) {
                     //归还优惠券
@@ -797,7 +813,10 @@ class MenusOrder extends Base
                 if ($order->serving_date >= date('Y-m-d H:i', strtotime("+3 hour"))) {
                     //TODO 给用户退款
                     $wechat = new WeChatPayService();
-
+                    $res = $wechat->Refund($order->order_no, $order->pay_price, '取消订单');
+                    if (!$res) {
+                        return JsonError('退款失败');
+                    }
 
                     if ($order->coupon_id) {
                         Db::name('users_coupon')
@@ -897,6 +916,14 @@ class MenusOrder extends Base
                 }
             }
 
+            $log = new CreditLog();
+            $log->user_id = $chef->id;
+            $log->content = '完成订单('.$order->order_no.')';
+            $log->number = 1;
+            $log->type = 1;
+            $log->save();
+
+            $chef->setInc('credit_line', 1);
             $chef->setInc('balance', $order->total_price);
 
             $order->order_status = 4;
@@ -969,6 +996,15 @@ class MenusOrder extends Base
                     }
                 }
             }
+
+            $log = new CreditLog();
+            $log->user_id = $chef->id;
+            $log->content = '完成订单('.$order->order_no.')';
+            $log->number = 1;
+            $log->type = 1;
+            $log->save();
+
+            $chef->setInc('credit_line', 1);
             $chef->setInc('balance', $order->total_price);
             $order->order_status = 4;
             $order->save();
@@ -1040,10 +1076,11 @@ class MenusOrder extends Base
             $comment->user_id = $this->user_id;
             $comment->parent_id = $parent_id;
             $comment->to_user_id = $menu->user_id;
+            $comment->order_id = $order_id;
             $comment->type = 2;
 
             if ($images = $request->param('images')) {
-                $comment->images = json_decode($images);
+                $comment->images = json_encode(json_decode($images, true));
             }
             $comment->save();
 
@@ -1064,4 +1101,90 @@ class MenusOrder extends Base
 
     }
 
+    /**
+     * 已品尝评论
+     */
+    public function comment_detail(Request $request)
+    {
+
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+
+        $order_id = $request->param('order_id');
+        if (!$order_id) {
+            return JsonError('订单ID获取失败');
+        }
+
+        $order = Order::where('id', $order_id)->find();
+        if (!$order) {
+            return JsonError('订单获取失败');
+        }
+
+        $menu_id = $request->param('menu_id');
+        if (!$menu_id) {
+            return JsonError('菜品ID获取失败');
+        }
+
+        $menu = Db::name('menus')->alias('m')
+            ->join('menus_reserve r', 'm.id=r.menu_id', 'left')
+            ->field('m.id,m.title,m.cover_image,m.introduce,r.price')
+            ->where('m.id', $menu_id)
+            ->find();
+        $menu['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $menu['cover_image'];
+
+        $comment = Db::name('menus_comment')->alias('c')
+            ->join('users u', 'c.user_id=u.id', 'left')
+            ->field('c.id,c.content,c.user_id,c.images,u.nickname,u.avatar,c.create_time')
+            ->where('c.order_id', $order_id)
+            ->where('type', 2)
+            ->find();
+
+
+        $replay = [];
+
+        if ($comment) {
+
+            $comment['images'] = json_decode($comment['images'], true);
+            if ($comment['images']) {
+                foreach ($comment['images'] as &$image) {
+                    $image = GetConfig('img_prefix', 'http://www.le-live.com') . $image;
+                }
+            } else {
+                $comment['images'] = [];
+            }
+
+            if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $comment['avatar'])) {
+                $comment['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $comment['avatar'];
+            }
+            $comment['create_time'] = date('m-d H:i', $comment['create_time']);
+            $replay = Db::name('menus_comment')->alias('c')
+                ->join('users u', 'c.user_id=u.id', 'left')
+                ->field('c.id,c.content,c.user_id,c.images,u.nickname,u.avatar,c.create_time')
+                ->where('c.menu_id', $menu_id)
+                ->where('c.parent_id', $comment['id'])
+                ->where('c.user_id', $order->chef_id)
+                ->find();
+            if (!$replay) {
+                $replay = [];
+            } else {
+                $replay['create_time'] = date('m-d H:i', $replay['create_time']);
+                if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $replay['avatar'])) {
+                    $replay['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $replay['avatar'];
+                }
+            }
+        } else {
+            $comment = [];
+        }
+
+        $data = [
+            'menu' => $menu,
+            'comment' => $comment,
+            'replay' => $replay
+        ];
+
+        return JsonSuccess($data);
+
+
+    }
 }

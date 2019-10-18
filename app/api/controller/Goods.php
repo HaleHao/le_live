@@ -52,8 +52,13 @@ class Goods extends Base
             return JsonError('参数获取失败');
         }
         $goods = \app\admin\model\Goods::with(['image', 'spec'])->where('id', $goods_id)->find();
-
         $goods['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $goods['cover_image'];
+        $spec = $goods->spec;
+        foreach($spec as &$val){
+            $val['image'] = $goods['cover_image'];
+        }
+        $goods['spec'] = $spec;
+
         $data = [
             'detail' => $goods
         ];
@@ -230,7 +235,7 @@ class Goods extends Base
                 'goods_name' => $goods->title,
                 'cover_image' => $goods->cover_image,
                 'amount' => $amount,
-                'spec_image' => $spec->image,
+                'spec_image' =>  $goods->cover_image,
                 'address_id' => $address_id,
                 'province' => $address->province,
                 'city' => $address->city,

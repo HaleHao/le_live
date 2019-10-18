@@ -2,6 +2,7 @@
 namespace app\api\controller;
 
 use app\admin\model\Users;
+use app\api\service\WeChatQrService;
 use app\api\service\WeChatService;
 use think\Cache;
 use think\Request;
@@ -37,15 +38,20 @@ class Wechat extends Base
                     $user = new Users();
                     $user->openid = $openid;
 
+                    $user->signature = '这个人很懒, 啥也没写';
                     if ($first_user_id){
                         $user->first_user_id = $first_user_id;
                         $second_user = Users::where('id',$first_user_id)->find();
                         if ($second_user){
                             $second_user_id = $second_user->first_user_id;
                             $user->second_user_id = $second_user_id;
+//                            $user->
                         }
                     }
 
+                }
+                if (!$user->signature){
+                    $user->signature = '这个人很懒, 啥也没写';
                 }
                 $user->last_time = $time;
                 $user->last_ip = $_SERVER['REMOTE_ADDR'];
@@ -54,8 +60,24 @@ class Wechat extends Base
                 $user->gender = $gender;
 
                 if ($user->save()){
+//                    $id = $user->getLastInsID();
                     //生成随机token
-
+//                    var_dump($user->id);exit;
+//                    $user->promote_qrcode = new WeChatQrService('pages/distribution/protocol/protocol',$user->id);
+//                    $user->save();
+//                    var_dump(__PUBLIC__);
+                    //推广二维码
+                    if (!$user->promote_qrcode){
+                        $res = new WeChatQrService('pages/distribution/protocol/protocol',$user->id);
+                        $user->promote_qrcode = $res->url;
+                        $user->save();
+                    }
+                    //分享二维码
+                    if(!$user->share_qrcode){
+                        $res = new WeChatQrService('pages/index/index',$user->id);
+                        $user->share_qrcode = $res->url;
+                        $user->save();
+                    }
                     $token = $this->saveCache($user->id);
                     $data = [
                         'token' => $token
@@ -74,6 +96,14 @@ class Wechat extends Base
      */
     public function saveCache($user_id)
     {
+        $token = $this->getToken();
+        Cache::set($token, $user_id);
+        return $token;
+    }
+
+    public function saveUser(Request $request)
+    {
+        $user_id = $request->param('user_id');
         $token = $this->getToken();
         Cache::set($token, $user_id);
         return $token;

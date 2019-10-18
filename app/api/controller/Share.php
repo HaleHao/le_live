@@ -12,6 +12,7 @@ use app\api\service\WeChatPayService;
 use think\Db;
 use think\Request;
 use app\admin\model\MenusOrder;
+use think\Validate;
 
 class Share extends Base
 {
@@ -35,6 +36,76 @@ class Share extends Base
     }
 
     /**
+     * 用户信息
+     */
+    public function user_info()
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+        $data = [
+            'detail' => [
+                'nickname' => $user->nickname,
+                'gender' => $user->gender,
+                'mobile' => $user->mobile,
+                'profession' => $user->profession,
+                'province' => $user->province,
+                'city' => $user->city,
+                'district' => $user->district,
+                'signature' => $user->signature
+            ]
+        ];
+        return JsonSuccess($data);
+    }
+
+
+    /**
+     * 保存
+     */
+    public function info_save(Request $request)
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+        $post = $request->param();
+        $validate = new Validate([
+            ['nickname', 'require', '昵称不能为空'],
+            ['gender', 'require', '性别不能为空'],
+            ['mobile', 'require', '手机号不能为空'],
+//            ['profession', 'require', '专业不能为空'],
+            ['province', 'require', '所在地区不能为空'],
+            ['city', 'require', '所在地区不能为空'],
+            ['district', 'require', '所在地区不能为空'],
+            ['signature', 'require', '个人简介'],
+        ]);
+        if (!$validate->check($post)) {
+            return JsonError($validate->getError());
+        }
+
+        $user->nickname = $post['nickname'];
+        $user->gender = $post['gender'];
+        $user->mobile = $post['mobile'];
+        $user->province = $post['province'];
+        $user->city = $post['city'];
+        $user->district = $post['district'];
+        $user->profession = $post['profession'];
+        $user->signature = $post['signature'];
+        if ($user->save()){
+            return JsonSuccess([],'保存成功');
+        }
+        return JsonError('保存失败');
+//        if ($request->param('profession'))
+    }
+
+    /**
      * 电子协议
      */
     public function electronic_agreement()
@@ -46,24 +117,24 @@ class Share extends Base
         if (!$user) {
             return JsonLogin();
         }
-        $first_user = Users::where('id',$user->first_user_id)->find();
-        if ($first_user){
-            if ($first_user->is_partner == 1){
-                $list = Db::name('store')->select();
-            }else{
-                $list = Db::name('store')->where('type',1)->select();
-            }
-        }else{
-        //判断是否有上下级
-            if ($user->is_partner == 1) {
-                $list = Db::name('store')->select();
-            } elseif ($user->is_enter == 1) {
-                $list = Db::name('store')->where('type', 1)->select();
-            } else {
-                $list = Db::name('store')->select();
-            }
-        }
-
+//        $first_user = Users::where('id',$user->first_user_id)->find();
+//        if ($first_user){
+//            if ($first_user->is_partner == 1){
+//                $list = Db::name('store')->select();
+//            }else{
+//                $list = Db::name('store')->where('type',1)->select();
+//            }
+//        }else{
+//        //判断是否有上下级
+//            if ($user->is_partner == 1) {
+//                $list = Db::name('store')->select();
+//            } elseif ($user->is_enter == 1) {
+//                $list = Db::name('store')->where('type', 1)->select();
+//            } else {
+//                $list = Db::name('store')->select();
+//            }
+//        }
+        $list = Db::name('store')->select();
         foreach ($list as &$val) {
             $val['agreement'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['agreement'];
         }
@@ -186,7 +257,7 @@ class Share extends Base
             return JsonError('订单获取失败');
         }
 
-        $notifyUrl = 'https://lelivepro.zx-xcx.com/api/notify/wechat';
+        $notifyUrl = GetConfig('app_url').'/api/notify/wechat';
 
         $pay = new WeChatPayService();
         $body = '购买'.$order->store_name;
@@ -399,7 +470,7 @@ class Share extends Base
         }
         //TODO 微信提现
         if ($type == 1){
-
+            return JsonError('暂不支持');
         }
 
         //支付宝

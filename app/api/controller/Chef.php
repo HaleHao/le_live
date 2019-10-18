@@ -85,8 +85,7 @@ class Chef extends Base
             return JsonError('参数获取失败');
         }
         $chef = Users::where('id', $chef_id)
-            ->where('is_auth', 1)
-            ->field(['id', 'like_num', 'fan_num', 'follower_num', 'avatar','gender', 'nickname', 'city', 'signature', 'skill', 'is_auth'])
+            ->field(['id', 'like_num', 'fan_num', 'follower_num', 'avatar','gender', 'nickname', 'city', 'signature', 'skill', 'is_auth','credit_line'])
             ->find();
 
         $res = Db::name('users_follower')->where('user_id', $this->user_id)->where('chef_id', $chef_id)->find();
@@ -95,14 +94,21 @@ class Chef extends Base
             $is_follower = 1;
         }
 
-        $reserve_num = Db::name('menus_reserve')
-            ->where('serving_date', '>', date('Y-m-d', time()))
-            ->where('total_amount', '>', 0)
+        $reserve_num = Db::name('menus_reserve')->alias('r')
+            ->join('menus m', 'm.id=r.menu_id and m.user_id=' . $chef_id . '', 'left')
+            ->where('m.id','>',0)
+            ->where('r.serving_date', '>', date('Y-m-d', time()))
+            ->where('r.total_amount', '>', 0)
             ->count();
 
         $menus_num = Menus::where('user_id', $chef_id)->count();
 
-        $posts_num = 0;
+        $posts_num = Db::name('menus_log')->alias('l')
+            ->join('menus m', 'l.menu_id=m.id', 'left')
+            ->join('menus_reserve r', 'l.menu_id=r.menu_id', 'left')
+            ->join('menus_like k','l.menu_id=k.menu_id and k.user_id='.$this->user_id.'','left')
+            ->where('m.id','>',0)
+            ->where('l.user_id', $chef_id)->count();
 
         $data = [
             'detail' => $chef,
@@ -159,28 +165,31 @@ class Chef extends Base
             ->join('address a', 'a.user_id=' . $chef_id . ' and a.type=2', 'left')
             ->join('menus_like l', 'r.menu_id=l.menu_id and l.user_id=' . $this->user_id, 'left')
             ->join('column c', 'm.column_id=c.id', 'left')
+            ->where('m.id','>',0)
             ->where('r.serving_date', '>', date('Y-m-d', time()))
             ->where('r.total_amount', '>', 0)
             ->field(['m.id', 'm.title', 'm.introduce', 'm.cover_image', 'm.like_num', 'r.price', 'c.title as label', 'a.longitude', 'a.latitude', 'l.id as is_like'])
             ->page($page, 10)->select();
         $count = Db::name('menus_reserve')->alias('r')
             ->join('menus m', 'm.id=r.menu_id and m.user_id=' . $chef_id . '', 'left')
+            ->where('m.id','>',0)
             ->where('r.serving_date', '>', date('Y-m-d', time()))
             ->where('r.total_amount', '>', 0)
             ->count();
         
         $longitude = $request->param('longitude');
         $latitude = $request->param('latitude');
-
-        $to = [$longitude, $latitude];
-        foreach ($list as $key => &$val) {
-            $form = [$val['longitude'], $val['latitude']];
-            $val['distance'] = GetDistance($form, $to);
-            $distance[] = $list[$key]['distance'];
-            $val['is_like'] = $val['is_like'] ? 1 : 0;
-            $list[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
+        if ($list){
+            $to = [$longitude, $latitude];
+            foreach ($list as $key => &$val) {
+                $form = [$val['longitude'], $val['latitude']];
+                $val['distance'] = GetDistance($form, $to);
+                $distance[] = $list[$key]['distance'];
+                $val['is_like'] = $val['is_like'] ? 1 : 0;
+                $list[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
+            }
+            array_multisort($distance, SORT_ASC, $list);
         }
-        array_multisort($distance, SORT_ASC, $list);
         $data = [
             'list' => $list,
             'count' => $count
@@ -203,7 +212,9 @@ class Chef extends Base
             ->join('menus m', 'l.menu_id=m.id', 'left')
             ->join('menus_reserve r', 'l.menu_id=r.menu_id', 'left')
             ->join('menus_like k','l.menu_id=k.menu_id and k.user_id='.$this->user_id.'','left')
-            ->where('l.user_id', $chef_id)->order('l.create_time', 'desc');
+            ->where('m.id','>',0)
+            ->where('l.user_id', $chef_id)
+            ->order('l.create_time', 'desc');
         $query1 = clone $query;
         $list = $query->page($page, 10)
             ->field(['l.content','l.create_time','m.id','m.cover_image','l.type','m.like_num','k.id as is_like','m.introduce','r.price'])
@@ -234,6 +245,9 @@ class Chef extends Base
         $chef_id = $request->param('chef_id');
         if (!$chef_id) {
             return JsonError('参数获取失败');
+        }
+        if ($chef_id == $this->user_id){
+            return JsonError('不能关注自己');
         }
         Db::startTrans();
         try {

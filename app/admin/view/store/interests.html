@@ -18,77 +18,65 @@
       display:none;
       color:#fff;
     }
+    .timt{width: 300px;}
+    .nowt{margin-left: 110px;}
+    .zt{float: left;width: 100%;}
+    .layui-input{height: 32px;}
 </style>
 </head>
 <body id="body">
   <div class="tplay-body-div"> 
   <div class="layui-tab">
     <ul class="layui-tab-title">
-      <li class="layui-this">菜单列表</li>
+      <li class="layui-this">店铺权益</li>
+      <li><a href="{:url('admin/store/edit_interests')}" class="a_menu">添加店铺权益</a></li>
     </ul>
   </div>
   <div class="layui-form-item" style="float: left;">
     <div class="layui-input-inline">
-      <input type="text" name="gymname" lay-verify="title" autocomplete="off" placeholder="请输入菜单关键字"
-             class="layui-input layui-btn-sm keywords">
+      <input type="text" lay-verify="title" autocomplete="off" placeholder="请输入标题关键词" class="layui-input layui-btn-sm keywords">
     </div>
     <div class="layui-input-inline">
-      <input type="text" name="gymname" lay-verify="title" autocomplete="off" placeholder="请输入用户关键字"
-             class="layui-input layui-btn-sm cname">
-    </div>
-    <div class="layui-input-inline">
-      <input type="text" name="gymname" lay-verify="title" autocomplete="off" placeholder="请输入栏目关键字"
-             class="layui-input layui-btn-sm column">
+      <input type="text" lay-verify="title" autocomplete="off" placeholder="请输入店铺关键词" class="layui-input layui-btn-sm store_name">
     </div>
     <button class="layui-btn layui-btn-sm" lay-submit="" id="serch">立即提交</button>
   </div>
   <table class="layui-table" lay-size="sm" id="demo" lay-filter="test"></table>
   {include file="public/foot"}
-  <script type="text/html" id="cover_image">
-    <img src="{{d.cover_image}}" height="100%" max-height="28px" onclick="show_img('{{d.cover_image}}')">
+  <script type="text/html" id="image">
+    <img src="{{d.image}}" height="100%" max-height="28px" onclick="show_img('{{d.image}}')">
   </script>
   <script type="text/html" id="barDemo">
-    <a class="layui-btn layui-btn-xs" lay-event="comment">菜单评论</a>
-    {{# if (d.reserve== 1) { }}
-    <a class="layui-btn layui-btn-xs" lay-event="detail">可预约详情</a>
-    {{# } else { }}
-    <a style="width: 80px;display: inline-block"></a>
-    {{# } }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
   </script>
   <script>
-    layui.use(['layer', 'form'], function () {
-      var layer = layui.layer,
-              $ = layui.jquery,
-              form = layui.form;
-    });
-    layui.use('table', function(){
-      var table = layui.table;
+    layui.use(['table','laydate'], function(){
+      var table = layui.table,
+          laydate = layui.laydate;
+      laydate.render({
+        elem: '#test1'
+      });
       table.render({
         elem: '#demo'
-        ,url: "{:url('admin/menus/indexall')}"
+        ,url: "{:url('admin/store/interestsAll')}"
         ,method:'post'
         ,page: true //开启分页
         ,defaultToolbar: ['filter', 'print', 'exports']
         ,cols: [[
-          {field: 'title', title: '标题', align: 'center',width:'10%'}
-          ,{field: 'cover_image', title: '封面', templet: '#cover_image', align: 'center',width:'8%'}
-          ,{field: 'nickname', title: '用户', align: 'center',width:'10%'}
-          ,{field: 'column_name', title: '栏目', align: 'center',width:'10%'}
-          ,{field: 'introduce', title: '介绍', align: 'center',width:'10%'}
-          ,{field: 'like_num', title: '点赞数', align: 'center',width:'7%'}
-          ,{field: 'comment_num', title: '评论数', align: 'center',width:'7%'}
-          ,{field: 'collect_num', title: '收藏数', align: 'center',width:'7%'}
-          ,{field: 'is_reserve', title: '可预约', align: 'center',width:'7%'}
-          ,{field: 'create_time', title: '添加时间', align: 'center',width:'10%'}
-          ,{fixed: 'right',title:'操作', width:'14%', align:'center', toolbar: '#barDemo'}
+          {field: 'title', title: '标题', align: 'center',width:'15%'}
+          ,{field: 'name', title: '店铺', align: 'center',width:'15%'}
+          ,{field: 'image', title: '图片', templet: '#image', align: 'center',width:'15%'}
+          ,{field: 'introduce', title: '描述', align: 'center',width:'30%'}
+          ,{field: 'create_time', title: '添加时间', align: 'center',width:'15%'}
+          ,{fixed: 'right',title:'操作', width:'10%', align:'center', toolbar: '#barDemo'}
         ]]
       });
       $('#serch').click(function () {
         table.reload('demo',{
           where:{
             keywords:$('.keywords').val(),
-            cname:$('.cname').val(),
-            column:$('.column').val(),
+            store_name:$('.store_name').val(),
           },
         })
       })
@@ -97,24 +85,35 @@
         var data = obj.data; //获得当前行数据
         var layEvent = obj.event; //获得 lay-event 对应的值（也可以是表头的 event 参数对应的值）
         var tr = obj.tr; //获得当前行 tr 的DOM对象
-        if(layEvent === 'comment'){
+        if (layEvent === 'edit'){
           layer.open({
             type: 2,
-            title: '菜单评论',
+            title: '编辑',
             shadeClose: true,
             area: ['100%', '100%'],
-            content: "{:url('admin/menus/menus_comment')}?menu_id=" + data.id,
+            content: "{:url('admin/store/edit_interests')}?id=" + data.id,
             end: function(index, layero){
               location.reload();
             }
           });
-        }else if(layEvent === 'detail'){
-          layer.open({
-            type: 2,
-            title: '可预约详情',
-            shadeClose: true,
-            area: ['100%', '100%'],
-            content: "{:url('admin/menus/detail')}?id=" + data.id,
+        }else if(layEvent === 'del'){ //删除
+          layer.confirm('确定删除本行数据吗', function (index) {
+            layer.close(index);
+            $.ajax({
+              url: "{:url('admin/store/del_interests')}",
+              data: {id: data.id},
+              success: function (res) {
+                if(res.code == 0){
+                  obj.del();
+                  layer.msg(res.msg, { icon: 1 }, { time: 1500 });
+                }else{
+                  layer.msg(res.msg, { icon: 2 }, { time: 1500 });
+                }
+              },
+              error: function (data) {
+                layer.msg('连接网络失败，请检查网络设置或联系管理员', { icon: 2 }, { time: 2000 });
+              }
+            })
           });
         }
       });

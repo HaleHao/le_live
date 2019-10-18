@@ -20,7 +20,10 @@ class Banner extends Permissions
 {
     public function index()
     {
-        $banner = BannerModel::order('sort','asc')->order('create_time','desc')->paginate(10);
+        $banner = BannerModel::order('sort','asc')->order('create_time','desc')->paginate(10,false,['query'=>request()->param()])->each(function ($item,$key){
+            $item['type']==1?$item['type']='首页':$item['type']='业务介绍';
+            return $item;
+        });
         $this->assign('banner',$banner);
         return $this->fetch();
     }

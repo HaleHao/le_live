@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css"  media="all">
+  <link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css" media="all" />
+  <link rel="stylesheet" href="__CSS__/admin.css"  media="all">
+</head>
+<style>
+  .input-group .form-control, .input-group-addon, .input-group-btn {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -webkit-box-pack: center;
+    -webkit-justify-content: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+  }
+
+  .file-item-delete {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #ff4544;
+    color: #fff;
+    width: 1.25rem;
+    height: 1.25rem;
+    line-height: 1.1rem;
+    text-align: center;
+    border-radius: 0 2px 0 2px;
+    cursor: pointer;
+    opacity: .25;
+    border: 1px solid #ee4140;
+    z-index: 2;
+  }
+  .file-item-delete:hover {
+    opacity: 1;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+  }
+  .thumb {margin-left:5px; margin-top:15px; height:128px}
+  #prevModal {width:100%; height:100%; text-align:center;display: none;}
+  #img_prev {max-width:98%; max-height:98%; margin: 10px auto}
+  .dtr{display: flex;width: 800px !important;}
+  .dtro{float: left;width: 77px;text-align: center;line-height: 38px;background: #eceeef;}
+  .dtrt{float: left;}
+  .dtrf{float: left;line-height: 38px;text-align: center;width: 50px;background: #eceeef;}
+  .dtd{display: flex;width: 100%;}
+  .dtdo{float: left;width: 50px;text-align: center;height: 30px;line-height: 30px;background: #eceeef;}
+  .dtdt{float: left;line-height: 30px !important;height: 30px !important;}
+  .dtdf{float: left;height: 30px;line-height: 30px;text-align: center;width: 38px;background: #eceeef;}
+  .dtt{border: 1px solid #eee;width: 800px!important;padding: 10px;}
+  .dtto{display: flex;padding: 0 0 5px 0;}
+  .dttoo{background: #eee;color: #fff;width: 1rem;height: 1rem;text-align: center;line-height: 1rem; border-radius: 999px;}
+  .dttt{display: -webkit-box;}
+  .dttto{display: -webkit-box;background: #eee;margin-right:1rem;overflow: hidden;}
+  .dtttot{padding:0 7px;display: inline-block;line-height: 30px;}
+  .dtttof{padding: 0.35rem 0.79rem;background: #d4cece;color: #fff;font-size: 1rem;font-weight: bold;}
+  .dtdta{line-height: 30px !important;height: 30px !important;}
+  .ctv{width: 80% !important;}
+  .son{display: -webkit-box}
+  .editinp{width: 100%;height: 18px;margin: 0 5px 0 5px;margin-right: 10px;}
+  .editinpi{margin: 0 5px 0 5px;width: 50px;}
+</style>
+<body id="body">
+<div class="tplay-body-div">
+  <div style="margin-top: 20px;">
+  </div>
+  <div class="layui-tab">
+    <ul class="layui-tab-title">
+      <li><a href="{:url('admin/store/interests')}" class="a_menu">店铺权益</a></li>
+      <li class="layui-this">添加店铺权益</li>
+    </ul>
+  </div>
+  <form class="layui-form" id="admin">
+    <div class="layui-form-item">
+      <label class="layui-form-label required">标题</label>
+      <div class="layui-input-block" style="max-width:600px;">
+        <input name="title" lay-verify="required" {notempty name="$info.title"} value='{$info.title}'{/notempty} autocomplete="off" placeholder="标题" class="layui-input" type="text">
+      </div>
+    </div>
+
+    <div class="layui-form-item">
+      <label class="layui-form-label">所属店铺</label>
+      <div class="layui-input-inline">
+        <select name="store_id" lay-filter="aihao">
+          <option value="">请选择店铺</option>
+          {notempty name="$store"}
+          {volist name="store" id="v"}
+          <option value="{$v.id}" {notempty name="$info.store_id"}{if condition="$info['store_id'] eq $v['id']"}selected=""{/if}{/notempty}>{$v.name}</option>
+          {/volist}
+          {/notempty}
+        </select>
+      </div>
+    </div>
+
+    <div class="layui-form-item">
+      <label class="layui-form-label required">图片</label>
+      <div class="layui-input-block" style="max-width:600px;">
+        <input name="photo" type="file" value="" multiple='multiple'/>
+      </div>
+      {notempty name="$info['image']"}
+      <div>
+        <img src="{$info.image}">
+      </div>
+      {/notempty}
+    </div>
+
+    <div class="layui-form-item">
+      <label class="layui-form-label required">描述</label>
+      <div class="layui-input-block" style="max-width:600px;">
+        <textarea name="introduce"  autocomplete="off" placeholder="描述" class="layui-input" type="text">{notempty name="$info.introduce"}{$info.introduce}{/notempty}</textarea>
+      </div>
+    </div>
+
+    <div class="layui-form-item">
+      <div class="layui-input-block">
+        <button class="layui-btn" lay-submit lay-filter="admin" id="submit">立即提交</button>
+        <input type="hidden" name="id" {notempty name="$info.id"} value='{$info.id}'{/notempty}>
+        <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+      </div>
+    </div>
+  </form>
+  <script src="__PUBLIC__/layui/layui.js"></script>
+  <script src="__PUBLIC__/jquery/jquery.min.js"></script>
+  <script>
+      layui.use(['layer', 'form','laydate'], function() {
+          var layer = layui.layer,
+              $ = layui.jquery,
+              form = layui.form,
+              laydate = layui.laydate;
+        $('#submit').click(function () {
+          var form = new FormData(document.getElementById("admin"));
+          $.ajax({
+            url: "{:url('admin/store/edit_interests')}",
+            data: form,
+            type: 'post',
+            async: false,
+            processData: false,//用于对data参数进行序列化处理 这里必须false
+            contentType: false, //必须
+            success: function (res) {
+              if (res.code == 1) {
+                layer.alert(res.msg, function (index) {
+                  parent.layer.close(index);
+                  location.href = res.url;
+                })
+              } else {
+                layer.msg(res.msg);
+              }
+            }
+          })
+          return false;
+        });
+      });
+  </script>
+</div>
+</body>
+</html>

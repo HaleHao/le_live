@@ -23,6 +23,7 @@ class Webconfig extends Permissions
         return $this->fetch();
     }
 
+
     public function publish()
     {
     	if($this->request->isPost()) {
@@ -52,4 +53,26 @@ class Webconfig extends Permissions
             }
         }
     }
+
+    /**
+     * 编辑公司简介
+     */
+    public function edit_company()
+    {
+        if (request()->isPost()) {
+            $post = $this->request->post();
+            $data['introduce'] = $post['introduce'];
+            $obj = Db::name('company_profile')->where('id',1)->update($data);
+            if ($obj) {
+                $this->success('编辑成功', url('webconfig/edit_company'));
+            } else {
+                $this->error('编辑失败');
+            }
+        } else {
+            $ret = Db::name('company_profile')->where('id',1)->find();
+            $this->assign('info',$ret);
+        }
+        return $this->fetch();
+    }
+
 }

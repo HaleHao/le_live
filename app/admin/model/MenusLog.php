@@ -12,13 +12,8 @@
 
 namespace app\admin\model;
 
-use \think\Model;
-class Column extends BaseModel
+class MenusLog extends BaseModel
 {
-    protected $table = 'le_column';
+    protected $table = 'le_menus_log';
 
-//    public function getImageAttr($value)
-//    {
-//        return $this->prefixImgUrl($value);
-//    }
 }

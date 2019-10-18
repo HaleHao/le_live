@@ -38,6 +38,8 @@ class Menus extends Permissions
             ->order('id desc')
             ->limit((input('page') - 1) * input('limit'), input('limit'))->select();
         foreach ($info as $k=>$v){
+            $is_reserve = Db::name('menus_reserve')->where('menu_id',$v['id'])->value('id');
+            $is_reserve?$info[$k]['reserve']=1:$info[$k]['reserve']=0;
             $v['is_reserve']==0?$info[$k]['is_reserve']='否':$info[$k]['is_reserve']='是';
             $info[$k]['create_time'] = date('Y-m-d H:i:s',$v['create_time']);
             $info[$k]['cover_image'] = str_replace('/uploads',GetConfig('img_prefix').'/uploads',$v['cover_image']);
@@ -53,6 +55,22 @@ class Menus extends Permissions
             'count'=>$count,
             'data'=>$info
         ];
+    }
+
+    /**
+     * 可预约详情
+     */
+    public function detail(){
+        $ret =  Db::name('menus_reserve')->alias('r')->where("r.menu_id",input('id'))
+            ->join('le_menus m','m.id=r.menu_id')
+            ->join('le_users u','u.id=r.user_id')
+            ->field('r.*,m.title,u.nickname')
+            ->find();
+        $ret['is_pick']==1?$ret['is_pick']='是':$ret['is_pick']='否';
+        $address = Db::name('address')->where('id',$ret['address_id'])->find();
+        $ret['address'] = $address['province'].$address['city'].$address['district'].$address['detail'];
+        $this->assign('info',$ret);
+        return $this->fetch();
     }
 
     /**

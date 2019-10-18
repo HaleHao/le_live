@@ -25,8 +25,8 @@ class Goods extends BaseModel
         return $this->hasMany('GoodsSpec','goods_id','id');
     }
 
-    public function getCoverImageAttr($value)
-    {
-        return $this->prefixImgUrl($value);
-    }
+//    public function getCoverImageAttr($value)
+//    {
+//        return $this->prefixImgUrl($value);
+//    }
 }

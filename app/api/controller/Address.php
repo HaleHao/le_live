@@ -80,6 +80,7 @@ class Address extends Base
 
     /**
      * 修改or添加地址
+     * 修改or添加地址
      */
     public function save(Request $request)
     {
@@ -180,5 +181,33 @@ class Address extends Base
             Db::rollback();
             return JsonError('设置失败');
         }
+    }
+
+    /**
+     * 删除地址
+     */
+    public function delete(Request $request)
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+
+        $address_id = $request->param('address_id');
+        if (!$address_id){
+            return JsonError('参数获取失败');
+        }
+
+        $address = \app\admin\model\Address::where('id',$address_id)->where('user_id',$this->user_id)->where('type',1)->find();
+        if (!$address){
+            return JsonError('数据获取失败');
+        }
+        if ($address->delete()){
+            return JsonSuccess([],'删除成功');
+        }
+        return JsonError('删除失败');
     }
 }

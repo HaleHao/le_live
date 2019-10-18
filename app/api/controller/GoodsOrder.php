@@ -253,7 +253,7 @@ class GoodsOrder extends Base
 
             $openid = $user['openid'];
 
-            $notifyUrl = GetConfig('app_url','http://www.le-live.com').'/api/notify/wechat';
+            $notifyUrl = GetConfig('app_url', 'http://www.le-live.com') . '/api/notify/wechat';
 
             $pay = new WeChatPayService();
             $result = $pay->Mini_Pay($order->order_no, $order->pay_price, $openid, $notifyUrl, '购买菜品');
@@ -381,54 +381,49 @@ class GoodsOrder extends Base
             if (!$order) {
                 return JsonError('订单获取失败');
             }
-            if ($order->order_status != 1) {
+            if (!in_array($order->order_status, [0, 1])) {
                 return JsonError('该订单不能取消');
             }
+            if ($order->order_status == 1) {
+                //给用户退款
+                if ($order->pay_type == 1) {
 
-            //给用户退款
-            if ($order->pay_type == 1){
-
-                $wechat = new WeChatPayService();
-                $result = $wechat->Refund($order->order_no, $order->pay_price, '取消订单');
-                if (!$result) {
-                    return JsonError('退款失败');
+                    $wechat = new WeChatPayService();
+                    $result = $wechat->Refund($order->order_no, $order->pay_price, '取消订单');
+                    if (!$result) {
+                        return JsonError('退款失败');
+                    }
                 }
-            }
-            if ($order->pay_type == 2){
+                if ($order->pay_type == 2) {
 
-                $user = Users::where('id',$this->user_id)->setInc('balance',$order->pay_price);
+                    $user = Users::where('id', $this->user_id)->setInc('balance', $order->pay_price);
 
-                $log = new WalletLog();
-                $log->user_id = $this->user_id;
-                $log->content = '配套订单（'.$order->order_no.'）取消';
-                $log->money = $order->pay_price;
-                $log->type = 1;
-                $log->save();
+                    $log = new WalletLog();
+                    $log->user_id = $this->user_id;
+                    $log->content = '配套订单（' . $order->order_no . '）取消';
+                    $log->money = $order->pay_price;
+                    $log->type = 1;
+                    $log->save();
 
-                if (!$user){
-                    return JsonError('退款失败');
+                    if (!$user) {
+                        return JsonError('退款失败');
+                    }
                 }
             }
             //退还库存
-            GoodsSpec::where('id',$order->spec_id)->setInc('inventory',$order->amount);
+            GoodsSpec::where('id', $order->spec_id)->setInc('inventory', $order->amount);
             //归还优惠券
             Db::name('users_coupon')
                 ->where('coupon_id', $order->coupon_id)
                 ->where('user_id', $this->user_id)->update([
                     'status' => 0
                 ]);
-
-
-
-
             $order->order_status = 4;
             $order->save();
 
-
-
             Db::commit();
-            return JsonSuccess([],'取消成功');
-        }catch (Exception $exception){
+            return JsonSuccess([], '取消成功');
+        } catch (Exception $exception) {
             Db::rollback();
             return JsonError('取消失败');
         }

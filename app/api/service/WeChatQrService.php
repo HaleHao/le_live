@@ -5,8 +5,7 @@
  * Date: 2018/10/25
  * Time: 11:37
  */
-
-namespace App\Service;
+namespace app\api\service;
 
 
 
@@ -32,8 +31,8 @@ class WeChatQrService
 
     public function __construct($path, $data)
     {
-        $this->appid = config('appid') ? config('appid') : $this->appid;
-        $this->secret = config('secret') ? config('secret') : $this->secret;
+        $this->appid = GetConfig('wx_app_id');
+        $this->secret = GetConfig('wx_secret');
         $this->path = $path;
         $this->data = $data;
         $this->wchatAccesTokenUrl = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' . $this->appid . '&secret=' . $this->secret;
@@ -69,9 +68,11 @@ class WeChatQrService
         ];
         $result = $this->http($this->getwxacodeunlimitUrl, json_encode($postData), 'POST');
 //        Log::info($result);
-        $filename = 'qrcode/' . date('YmdHis') . md5(time()) . '.jpg';
-        file_put_contents(public_path() . '/uploads/'.$filename, $result);
-        $this->url = $filename;
+        $str = date('YmdHis') . md5(time()) . '.jpg';
+        $filename = 'public/uploads/qrcode/' .$str;
+        $url = '/uploads/qrcode/' .$str;
+        file_put_contents(ROOT_PATH.$filename, $result);
+        $this->url = $url;
     }
 
 

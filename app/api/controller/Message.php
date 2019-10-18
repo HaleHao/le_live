@@ -26,9 +26,10 @@ class Message extends Base
             ->where('c.user_id', $this->user_id)
             ->where('c.parent_id', '>', 0)
             ->order('c.create_time', 'desc')
-            ->field(['c.id', 'c.create_time', 'c.content as replay', 'c2.content', 'm.id as menu_id', 'm.title', 'm.introduce', 'm.cover_image', 'r.nickname as replay_nickname', 'r.id as replay_user_id', 'u.avatar as replay_avatar', 'u.nickname', 'u.id as user_id'])
+            ->field(['c.id', 'c.create_time', 'c.content as replay', 'c2.images', 'c2.content', 'm.id as menu_id', 'm.title', 'm.introduce', 'm.cover_image', 'r.nickname as replay_nickname', 'r.id as replay_user_id', 'u.avatar as replay_avatar', 'u.nickname', 'u.id as user_id'])
             ->page($page, 10)
             ->select();
+
         $count = Db::name('menus_comment')->alias('c')
             ->join('menus m', 'c.menu_id=m.id', 'left')
             ->join('menus_comment c2', 'c.parent_id=c2.id', 'left')
@@ -44,7 +45,13 @@ class Message extends Base
                 $list[$key]['replay_avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['replay_avatar'];
             }
             $list[$key]['create_time'] = date('m-d H:i:s', $val['create_time']);
-
+            $images = json_decode($val['images'],true);
+            if ($images){
+                foreach($images as $v){
+                    $arr[] = GetConfig('img_prefix', 'http://www.le-live.com').$v;
+                }
+            }
+            $list[$key]['images'] = $arr;
         }
         $data = [
             'list' => $list,

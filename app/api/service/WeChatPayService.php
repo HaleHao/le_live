@@ -19,15 +19,15 @@ class WeChatPayService
     //提现接口哦
     protected $transfers = 'https://api.mch.weixin.qq.com/mmpaymkttransfers/promotion/transfers';
     //商户密钥
-    protected $key = 'fnR8NbPlqZ9DtGQteyRwcFRsjMcpoek4';
+    protected $key = 'ar329tfwhpqhngpw3ptw9yr2tjwepfts';
     //微信Appid
-    protected $app_id = 'wxc7811d73da68c79e';
+    protected $app_id = 'wx3b3bef28e20cd3f2';
     //微信商户号
-    protected $mch_id = '1491703102';
+    protected $mch_id = '1555289501';
     //证书路径(Ps：主要用户退款，提现)
-    protected $SSLCERT_PATH = 'Service/Cert/apiclient_cert.pem';
+    protected $SSLCERT_PATH = 'service/cert/apiclient_cert.pem';
     //证书路径
-    protected $SSLKEY_PATH = 'Service/Cert/apiclient_key.pem';
+    protected $SSLKEY_PATH = 'service/cert/apiclient_key.pem';
 
 
     public function __construct()
@@ -67,8 +67,6 @@ class WeChatPayService
             'trade_type' => 'JSAPI',
             'openid' => $openid
         ];
-//        dd($paydata);
-        //添加签名
         $paydata['sign'] = $this->getSign($paydata);
         $paydata = $this->arrayToXml($paydata);
         $resultData = $this->postXmlOrJson($this->unifiedorderUrl, $paydata);
@@ -237,25 +235,27 @@ class WeChatPayService
      * Date: 2019/5/31 0031
      * 退款（Ps:退款可以用商家自己生成的地址，也可以用微信支付的流水号）
      */
-    public function Refund($out_refund_no, $total_fee,$refund_desc)
+    public function Refund($out_trade_no, $total_fee,$refund_desc)
     {
         $refund = [
             'appid' => $this->app_id,
             'mch_id' => $this->mch_id,
             'nonce_str' => $this->nonce_str(),
             'sign_type' => 'MD5',
-//            'transaction_id' => $transaction_id,//微信订单号
             'refund_desc' => $refund_desc,//退款说明
-            'out_refund_no' => $out_refund_no,//商家订单号
+            'out_trade_no' => $out_trade_no,//商家订单号
+            'out_refund_no' => $out_trade_no,//商家订单号
             'total_fee' => intval($total_fee * 100),
             'refund_fee' => intval($total_fee * 100),
 //            'notify_url' => $notifyUrl//回调地址
         ];
+
         //添加签名
         $refund['sign'] = $this->getSign($refund);
         $refund = $this->arrayToXml($refund);
         $resultData = $this->postXmlSSLCurl($this->refundUrl, $refund);
         $resultData = $this->XmlToArr($resultData);
+//        var_dump($resultData);exit;
         if ($resultData){
             if ($resultData['return_code'] == 'SUCCESS') {
                 if ($resultData['result_code'] == 'SUCCESS') {
@@ -409,10 +409,10 @@ class WeChatPayService
         //使用证书：cert 与 key 分别属于两个.pem文件
         //默认格式为PEM，可以注释
         curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'PEM');
-        curl_setopt($ch, CURLOPT_SSLCERT, app_path($this->SSLCERT_PATH));
+        curl_setopt($ch, CURLOPT_SSLCERT, ROOT_PATH.'app/api/service/cert/apiclient_cert.pem');
         //默认格式为PEM，可以注释
         curl_setopt($ch, CURLOPT_SSLKEYTYPE, 'PEM');
-        curl_setopt($ch, CURLOPT_SSLKEY, app_path($this->SSLKEY_PATH));
+        curl_setopt($ch, CURLOPT_SSLKEY, ROOT_PATH.'app/api/service/cert/apiclient_key.pem');
         //post提交方式
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $xml);

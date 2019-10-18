@@ -16,8 +16,8 @@ class Banner extends BaseModel
 {
     protected $table = 'le_banner';
 
-    public function getImageAttr($value)
-    {
-        return $this->prefixImgUrl($value);
-    }
+//    public function getImageAttr($value)
+//    {
+//        return $this->prefixImgUrl($value);
+//    }
 }

@@ -13,12 +13,7 @@
 namespace app\admin\model;
 
 use \think\Model;
-class Column extends BaseModel
+class CreditLog extends Model
 {
-    protected $table = 'le_column';
-
-//    public function getImageAttr($value)
-//    {
-//        return $this->prefixImgUrl($value);
-//    }
+    
 }

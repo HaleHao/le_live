@@ -70,6 +70,18 @@
       </div>
 
       <div class="layui-form-item">
+        <label class="layui-form-label">场景</label>
+        <div class="layui-input-inline">
+          <select name="type" lay-verify="required" lay-filter="aihao">
+            <option value="">请选择店铺</option>
+            <option value="1">首页</option>
+            <option value="2">业务介绍</option>
+            <option value="3></option>
+          </select>
+        </div>
+      </div>
+
+      <div class="layui-form-item">
         <label class="layui-form-label">跳转地址</label>
         <div class="layui-input-block" style="max-width:600px;">
           <input name="pages" autocomplete="off" placeholder="请输入跳转地址" class="layui-input" type="text">

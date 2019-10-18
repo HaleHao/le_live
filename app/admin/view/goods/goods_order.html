@@ -62,6 +62,9 @@
   {include file="public/foot"}
   <script type="text/html" id="barDemo">
     <a class="layui-btn layui-btn-xs" lay-event="detail">查看</a>
+    {{# if (d.order_status== '待发货') { }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">发货</a>
+    {{# } }}
   </script>
   <script type="text/html" id="cover_image">
     <img src="{{d.cover_image}}" height="100%" max-height="28px" onclick="show_img('{{d.cover_image}}')">
@@ -119,8 +122,20 @@
               location.reload();
             }
           });
+        }else if(layEvent === 'edit'){
+            layer.open({
+                type: 2,
+                title: '发货',
+                shadeClose: true,
+                area: ['50%', '50%'],
+                content: "{:url('admin/goods/deliver_show')}?id=" + data.id,
+                end: function(index, layero){
+                    location.reload();
+                }
+            });
         }
       });
+
     });
   </script>
   <script>

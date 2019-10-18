@@ -89,16 +89,44 @@ class Mine extends Base
         if (!$this->user_id) {
             return JsonLogin();
         }
-
         $user = Users::where('id', $this->user_id)->find();
         if (!$user) {
             return JsonLogin();
         }
-        $data = $request->param();
-        if ($user->save($data)) {
-            return JsonSuccess();
+        $post = $request->param();
+        $validate = new Validate([
+            ['nickname', 'require', '昵称不能为空'],
+            ['gender', 'require', '性别不能为空'],
+            ['mobile', 'require', '手机号不能为空'],
+//            ['profession', 'require', '专业不能为空'],
+            ['province', 'require', '所在地区不能为空'],
+            ['city', 'require', '所在地区不能为空'],
+            ['district', 'require', '所在地区不能为空'],
+            ['signature', 'require', '个人简介不能为空'],
+            ['skill', 'require', '技能不能为空'],
+        ]);
+
+        if (!$validate->check($post)) {
+            return JsonError($validate->getError());
         }
-        return JsonError();
+        if ($avatar = $request->param('avatar')){
+            $user->avatar = $avatar;
+        }
+        if ($image = $request->param('image')){
+            $user->image = $image;
+        }
+        $user->nickname = $post['nickname'];
+        $user->gender = $post['gender'];
+        $user->mobile = $post['mobile'];
+        $user->city = $post['city'];
+        $user->district = $post['district'];
+        $user->province = $post['province'];
+//        $user->profession = $post['profession'];
+        $user->signature = $post['signature'];
+        if ($user->save()){
+            return JsonSuccess([],'保存成功');
+        }
+        return JsonError('保存失败');
     }
 
 
@@ -350,7 +378,7 @@ class Mine extends Base
         $list = Db::name('menus_reserve')->alias('r')
             ->join('menus m', 'r.menu_id=m.id', 'left')
             ->where('m.user_id', $this->user_id)
-            ->field(['m.create_time', 'm.cover_image', 'r.id', 'm.title', 'm.introduce', 'm.like_num', 'r.price'])
+            ->field(['m.create_time', 'm.cover_image', 'r.id', 'm.id as menu_id' , 'm.title', 'm.introduce', 'm.like_num', 'r.price','m.collect_num'])
             ->page($page, 10)
             ->select();
 
@@ -577,29 +605,22 @@ class Mine extends Base
                 ->field('id,title,price,conditions,start_date,start_time,end_date,end_time')
 //                ->page(2,5)
                 ->select();
-
         }
-        $unclaimed = Db::name('coupon')
-            ->where('number', '>', 0)
-            ->where('end_time', '>', time())
-            ->where('id Not IN ' . $subQueryb)->count();
+
 
         //已领取的卡券
         if ($type == 2) {
             $list = Db::name('users_coupon')->alias('u')
-                ->join('coupon c', 'u.coupon_id=c.id', 'left')
+                ->join('coupon c', 'c.id=u.coupon_id', 'left')
+                ->where('c.end_time','>',time())
                 ->where('u.status', 0)
-                ->where('c.end_time', '<', time())
                 ->where('u.user_id', $this->user_id)
-                ->field(['c.id,c.title,c.price,c.conditions,c.start_date,c.start_time,c.end_date,c.end_time'])
+                ->field('c.id,c.title,c.price,c.conditions,c.start_date,c.start_time,c.end_date,c.end_time')
                 ->select();
-
+//            var_dump($list);
+//            exit;
         }
-        $already =  Db::name('users_coupon')->alias('u')
-            ->join('coupon c', 'u.coupon_id=c.id', 'left')
-            ->where('u.status', 0)
-            ->where('c.end_time', '<', time())
-            ->where('u.user_id', $this->user_id)->count();
+
         //已使用的卡券
         if ($type == 3) {
             $list = Db::name('users_coupon')->alias('u')
@@ -608,12 +629,22 @@ class Mine extends Base
                 ->where('u.user_id', $this->user_id)
                 ->field(['c.id,c.title,c.price,c.conditions,c.start_date,c.start_time,c.end_date,c.end_time'])
                 ->select();
-
         }
+
+        $unclaimed = Db::name('coupon')
+            ->where('number', '>', 0)
+            ->where('end_time', '>', time())
+            ->where('id Not IN ' . $subQueryb)->count();
+        $already =  Db::name('users_coupon')->alias('u')
+            ->join('coupon c', 'c.id=u.coupon_id', 'left')
+            ->where('c.end_time','>',time())
+            ->where('u.status', 0)
+            ->where('u.user_id', $this->user_id)->count();
         $use = Db::name('users_coupon')->alias('u')
             ->join('coupon c', 'u.coupon_id=c.id', 'left')
             ->where('u.status', 1)
             ->where('u.user_id', $this->user_id)->count();
+
         $data = [
             'list' => $list,
             'unclaimed' => $unclaimed,
