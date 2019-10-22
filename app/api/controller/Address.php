@@ -130,7 +130,7 @@ class Address extends Base
             $is_default = $post['is_default'];
 
             if ($is_default == 1) {
-                $address->is_default = 1;
+//                $address->is_default = 1;
                 AddressModel::where('user_id', $this->user_id)->where('type', $request->param('type', 1))->update([
                     'is_default' => 0
                 ]);
@@ -140,6 +140,8 @@ class Address extends Base
                     $address->is_default = 1;
                 }
             }
+
+            $address->is_default = $is_default;
             $address->save();
             Db::commit();
             return JsonSuccess();

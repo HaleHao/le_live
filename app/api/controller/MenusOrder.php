@@ -103,6 +103,11 @@ class MenusOrder extends Base
                 $arr1[$i] = date("H:i", $e);
             }
         }
+
+//        for ($i=0;$i < $num;$i++){
+//            $e = strtotime($st)
+//        }
+//
         $data = [
             //用户的默认配送地址
             'delivery_address' => $delivery_address,
@@ -115,7 +120,7 @@ class MenusOrder extends Base
             //总价
             'total_price' => $total_price,
             //优惠价格
-            'preferential_price' => $preferential_price,
+            'preferential_price' => round($preferential_price,2),
             //送达时间
             'serving_tme' => $arr1,
 
@@ -127,11 +132,8 @@ class MenusOrder extends Base
 
             'is_pick' => $is_pick,
         ];
-
         return JsonSuccess($data);
-
     }
-
 
     /**
      * 订单可使用的优惠券列表
@@ -300,7 +302,7 @@ class MenusOrder extends Base
                 'pay_type' => 1,
                 'pay_price' => $preferential_price,
                 'total_price' => $total_price,
-                'preferential_price' => $preferential_price,
+                'preferential_price' => round($preferential_price,2),
                 'is_coupon' => $is_coupon,
                 'coupon_id' => $coupon_id,
                 'serving_time' => strtotime($serving_time),

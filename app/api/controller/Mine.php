@@ -24,7 +24,7 @@ class Mine extends Base
             return JsonLogin();
         }
 
-        $user = Users::where('id', $this->user_id)->field(['avatar', 'gender', 'nickname', 'skill', 'is_auth', 'follower_num', 'fan_num','is_enter'])->find();
+        $user = Users::where('id', $this->user_id)->field(['avatar', 'gender', 'nickname', 'skill', 'is_auth', 'follower_num', 'fan_num', 'is_enter'])->find();
         if (!$user) {
             return JsonLogin();
         }
@@ -40,18 +40,18 @@ class Mine extends Base
      */
     public function member_privilege()
     {
-        if (!$this->user_id){
+        if (!$this->user_id) {
             return JsonLogin();
         }
-        $user = Users::where('id',$this->user_id)->find();
-        if ($user->is_partner == 1){
-            $store = Db::name('store')->where('type',2)->find();
-        }else{
-            $store = Db::name('store')->where('type',1)->find();
+        $user = Users::where('id', $this->user_id)->find();
+        if ($user->is_partner == 1) {
+            $store = Db::name('store')->where('type', 2)->find();
+        } else {
+            $store = Db::name('store')->where('type', 1)->find();
         }
-        $privilege = Db::name('store_privilege')->where('store_id',$store['id'])->select();
-        foreach ($privilege as &$val){
-            $val['image'] = GetConfig('img_prefix').$val['image'];
+        $privilege = Db::name('store_privilege')->where('store_id', $store['id'])->select();
+        foreach ($privilege as &$val) {
+            $val['image'] = GetConfig('img_prefix') . $val['image'];
         }
         $data = [
             'avatar' => $user->avatar,
@@ -71,9 +71,22 @@ class Mine extends Base
             return JsonLogin();
         }
 
-        $user = Users::where('id', $this->user_id)->field(['avatar', 'nickname', 'gender', 'mobile', 'province', 'city', 'district', 'signature', 'skill', 'image'])->find();
+        $user = Db::name('users')->where('id', $this->user_id)->field(['avatar', 'nickname', 'gender', 'mobile', 'province', 'city', 'district', 'signature', 'skill', 'image'])->find();
         if (!$user) {
             return JsonLogin();
+        }
+        if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $user['avatar'])) {
+            $user['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $user['avatar'];
+        }
+
+        if($user['province']){
+
+        }
+
+        if ($user['image']){
+            $user['show_image'] = GetConfig('img_prefix', 'http://www.le-live.com').$user['image'];
+        }else{
+            $user['show_image'] = '';
         }
         $data = [
             'detail' => $user
@@ -109,10 +122,10 @@ class Mine extends Base
         if (!$validate->check($post)) {
             return JsonError($validate->getError());
         }
-        if ($avatar = $request->param('avatar')){
+        if ($avatar = $request->param('avatar')) {
             $user->avatar = $avatar;
         }
-        if ($image = $request->param('image')){
+        if ($image = $request->param('image')) {
             $user->image = $image;
         }
         $user->nickname = $post['nickname'];
@@ -121,12 +134,12 @@ class Mine extends Base
         $user->city = $post['city'];
         $user->district = $post['district'];
         $user->province = $post['province'];
-//        $user->profession = $post['profession'];
         $user->signature = $post['signature'];
-        if ($user->save()){
-            return JsonSuccess([],'保存成功');
-        }
-        return JsonError('保存失败');
+//        $user->profession = $post['profession'];
+        $user->skill = $post['skill'];
+        $user->save();
+        return JsonSuccess([], '保存成功');
+
     }
 
 
@@ -135,29 +148,29 @@ class Mine extends Base
      */
     public function auth_submit(Request $request)
     {
-        if (!$this->user_id){
+        if (!$this->user_id) {
             return JsonLogin();
         }
-        $user = Users::where('id',$this->user_id)->find();
-        if (!$user){
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
             return JsonLogin();
         }
-        if ($user->is_enter != 1){
+        if ($user->is_enter != 1) {
             return JsonError('你未入驻');
         }
         $card_front = $request->param('card_front');
-        if (!$card_front){
+        if (!$card_front) {
             return JsonError('请上传身份证正面');
         }
         $card_back = $request->param('card_back');
-        if (!$card_back){
+        if (!$card_back) {
             return JsonError('请上传身份证背面');
         }
         $user->card_front = $card_front;
         $user->card_back = $card_back;
         $user->is_auth = 0;
-        if ($user->save()){
-            return JsonSuccess([],'提交成功，请等待审核');
+        if ($user->save()) {
+            return JsonSuccess([], '提交成功，请等待审核');
         }
         return JsonError('提交失败');
     }
@@ -167,11 +180,11 @@ class Mine extends Base
      */
     public function auth_detail()
     {
-        if (!$this->user_id){
+        if (!$this->user_id) {
             return JsonLogin();
         }
-        $user = Users::where('id',$this->user_id)->find();
-        if (!$user){
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
             return JsonLogin();
         }
         $data = [
@@ -198,7 +211,7 @@ class Mine extends Base
             ->join('menus_reserve r', 'm.id=r.menu_id', 'left')
             ->where('m.user_id', $this->user_id)
             ->order('create_time', 'desc')
-            ->field(['m.create_time', 'm.cover_image', 'm.id', 'm.title', 'm.introduce', 'm.like_num', 'r.price','m.collect_num'])->page($page, 10)->select();
+            ->field(['m.create_time', 'm.cover_image', 'm.id', 'm.title', 'm.introduce', 'm.like_num', 'r.price', 'm.collect_num'])->page($page, 10)->select();
         $count = Menus::where('user_id', $this->user_id)
             ->order('create_time', 'desc')
             ->count();
@@ -296,7 +309,6 @@ class Mine extends Base
             $menu->column_id = $post['column_id'];
             $menu->user_id = $this->user_id;
 
-
             $menu->save();
             //将之前的图片删除了
             Db::name('menus_image')->where('menu_id', $menu_id)->delete();
@@ -305,6 +317,7 @@ class Mine extends Base
                 $image_model = new MenusImage();
                 $image_model->image = $image;
                 $image_model->menu_id = $menu_id;
+                $image_model->type = 'image';
                 $image_model->save();
             }
             Db::commit();
@@ -378,7 +391,7 @@ class Mine extends Base
         $list = Db::name('menus_reserve')->alias('r')
             ->join('menus m', 'r.menu_id=m.id', 'left')
             ->where('m.user_id', $this->user_id)
-            ->field(['m.create_time', 'm.cover_image', 'r.id', 'm.id as menu_id' , 'm.title', 'm.introduce', 'm.like_num', 'r.price','m.collect_num'])
+            ->field(['m.create_time', 'm.cover_image', 'r.id', 'm.id as menu_id', 'm.title', 'm.introduce', 'm.like_num', 'r.price', 'm.collect_num'])
             ->page($page, 10)
             ->select();
 
@@ -612,7 +625,7 @@ class Mine extends Base
         if ($type == 2) {
             $list = Db::name('users_coupon')->alias('u')
                 ->join('coupon c', 'c.id=u.coupon_id', 'left')
-                ->where('c.end_time','>',time())
+                ->where('c.end_time', '>', time())
                 ->where('u.status', 0)
                 ->where('u.user_id', $this->user_id)
                 ->field('c.id,c.title,c.price,c.conditions,c.start_date,c.start_time,c.end_date,c.end_time')
@@ -635,9 +648,9 @@ class Mine extends Base
             ->where('number', '>', 0)
             ->where('end_time', '>', time())
             ->where('id Not IN ' . $subQueryb)->count();
-        $already =  Db::name('users_coupon')->alias('u')
+        $already = Db::name('users_coupon')->alias('u')
             ->join('coupon c', 'c.id=u.coupon_id', 'left')
-            ->where('c.end_time','>',time())
+            ->where('c.end_time', '>', time())
             ->where('u.status', 0)
             ->where('u.user_id', $this->user_id)->count();
         $use = Db::name('users_coupon')->alias('u')
@@ -757,15 +770,15 @@ class Mine extends Base
      */
     public function wallet_withdraw(Request $request)
     {
-        if (!$this->user_id){
+        if (!$this->user_id) {
             return JsonLogin();
         }
-        $user = Users::where('id',$this->user_id)->find();
-        if (!$user){
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
             return JsonLogin();
         }
         $money = $request->param('money');
-        if ($money < 1){
+        if ($money < 1) {
             return JsonError('金额大于1');
         }
 
@@ -808,4 +821,110 @@ class Mine extends Base
         return JsonSuccess($data);
     }
 
+
+    /**
+     * 粉丝列表
+     */
+    public function fan_list(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
+            return JsonLogin();
+        }
+
+        $page = $request->param('page', 1);
+        $list = Db::name('users_follower')->alias('f')
+            ->join('users u', 'f.user_id=u.id', 'left')
+            ->join('users_follower f2', 'f2.user_id=' . $this->user_id . ' and f2.chef_id=f.user_id', 'left')
+            ->where('f.chef_id', $this->user_id)
+            ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter', 'f2.id as is_follower'])
+            ->order('f.create_time', 'desc')
+            ->page($page, 10)
+            ->select();
+
+        foreach ($list as $key => $item) {
+            if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
+                $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+            }
+            $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
+            $is_follower = 0;
+            if ($item['is_follower']) {
+                $is_follower = 1;
+            }
+            $list[$key]['is_follower'] = $is_follower;
+        }
+
+        $count = Db::name('users_follower')->where('chef_id', $this->user_id)->count();
+        $data = [
+            'list' => $list,
+            'count' => $count
+        ];
+        return JsonSuccess($data);
+
+    }
+
+
+    /**
+     * 关注人的列表
+     */
+    public function follower_list(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
+            return JsonLogin();
+        }
+
+        $page = $request->param('page', 1);
+        $list = Db::name('users_follower')->alias('f')
+            ->join('users u', 'f.chef_id=u.id', 'left')
+            ->where('f.user_id', $this->user_id)
+            ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter'])
+            ->order('f.create_time', 'desc')
+            ->page($page, 10)
+            ->select();
+
+        foreach ($list as $key => $item) {
+            if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
+                $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+            }
+            $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
+        }
+        $count = Db::name('users_follower')->where('user_id', $this->user_id)->count();
+
+        $data = [
+            'list' => $list,
+            'count' => $count
+        ];
+
+        return JsonSuccess($data);
+    }
+
+
+    /**
+     * 红包海报
+     */
+    public function red_poster()
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+
+        return JsonSuccess([
+            'red_poster' =>  GetConfig('img_prefix', 'http://www.le-live.com').$user->red_poster,
+            'user_id' => $user->id,
+        ]);
+
+    }
 }

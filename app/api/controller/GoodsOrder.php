@@ -79,6 +79,8 @@ class GoodsOrder extends Base
         }
         $freight = '0.00';
 
+        $goods['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com'). $goods['cover_image'];
+
         $data = [
             'goods' => $goods,
             'spec' => $spec,
@@ -302,7 +304,7 @@ class GoodsOrder extends Base
             return JsonLogin();
         }
         $page = $request->param('page', 1);
-        $list = Order::where('user_id', $this->user_id)->page($page, 10)->select();
+        $list = Order::where('user_id', $this->user_id)->order('create_time','desc')->page($page, 10)->select();
         $count = Order::where('user_id', $this->user_id)->count();
         $data = [
             'list' => $list,

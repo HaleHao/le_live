@@ -141,7 +141,9 @@
       <label class="layui-form-label">规格组</label>
       <div class="layui-input-inline dtr">
         <div class="dtro">规格组</div>
-        <div class="dtrt"><input name="spec" id="specval" lay-verify="required" autocomplete="off" placeholder="颜色、尺码等" class="layui-input" type="text"></div>
+        <div class="dtrt">
+          <input name="spec" id="specval" value="{$goods.spec_team}" lay-verify="required" autocomplete="off" placeholder="颜色、尺码等" class="layui-input" type="text">
+        </div>
         <div class="dtrf addspec">添加</div>
       </div>
     </div>

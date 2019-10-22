@@ -230,4 +230,9 @@ class Menus extends Permissions
         return $this->fetch();
     }
 
+    public function edit_is_pick()
+    {
+        Db::name('menus')->where('id',input('id'))->update(['is_pick'=>input('switch')]);
+    }
+
 }

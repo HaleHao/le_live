@@ -27,7 +27,9 @@ class Share extends Base
             ->field(['image'])
             ->select();
         $introduce = Db::name('company_profile')->find();
-
+        foreach($banner as $key => $val){
+            $banner[$key]['image'] = GetConfig('img_prefix').$val['image'];
+        }
         $data = [
             'banner' => $banner,
             'introduce' => $introduce['introduce']

@@ -76,7 +76,6 @@
             <option value="">请选择店铺</option>
             <option value="1">首页</option>
             <option value="2">业务介绍</option>
-            <option value="3></option>
           </select>
         </div>
       </div>
@@ -176,32 +175,33 @@
     </script>
 
     <script>
-      layui.use(['layer', 'form'], function() {
-          var layer = layui.layer,
-              $ = layui.jquery,
-              form = layui.form;
-          $(window).on('load', function() {
-              form.on('submit(admin)', function(data) {
-                  $.ajax({
-                      url:"{:url('admin/banner/save')}",
-                      data:$('#admin').serialize(),
-                      type:'post',
-                      async: false,
-                      success:function(res) {
-                          if(res.code == 1) {
+        layui.use(['layer', 'form'], function() {
+            var layer = layui.layer,
+                $ = layui.jquery,
+                form = layui.form;
+            $(window).on('load', function() {
+                form.on('submit(admin)', function(data) {
+                    $.ajax({
+                        url:"{:url('admin/banner/save')}",
+                        data:$('#admin').serialize(),
+                        type:'post',
+                        async: false,
+                        success:function(res) {
+                            if(res.code == 1) {
                                 layer.alert(res.msg, function(index){
-                                  location.href = res.url;
-                              })
-                          } else {
-                              layer.msg(res.msg);
-                          }
-                      }
-                  })
-                  return false;
-              });
-          });
-      });
+                                    location.href = res.url;
+                                })
+                            } else {
+                                layer.msg(res.msg);
+                            }
+                        }
+                    })
+                    return false;
+                });
+            });
+        });
     </script>
+
 
   </div>
 </body>

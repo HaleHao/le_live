@@ -36,14 +36,30 @@
   </div>
   <table class="layui-table" lay-size="sm" id="demo"></table>
   {include file="public/foot"}
+  <script type="text/html" id="avatar">
+    <img src="{{d.avatar}}" height="100%" max-height="28px" onclick="show_img('{{d.avatar}}')">
+  </script>
+  <script type="text/html" id="promote_qrcode">
+    <img src="{{d.promote_qrcode}}" height="100%" max-height="28px" onclick="show_img('{{d.promote_qrcode}}')">
+  </script>
+  <script type="text/html" id="share_qrcode">
+    <img src="{{d.share_qrcode}}" height="100%" max-height="28px" onclick="show_img('{{d.share_qrcode}}')">
+  </script>
+  <script type="text/html" id="isbu">
+    {{# if (d.is_bu== 1) { }}
+    <div class="layui-form-item layui-form">
+      <input type="checkbox" checked="checked" name="open" tid="{{d.id}}" lay-skin="switch" lay-filter="switchTest" lay-text="是|否">
+    </div>
+    {{# } else { }}
+    <div class="layui-form-item layui-form">
+      <input type="checkbox" name="open" tid="{{d.id}}" lay-skin="switch" lay-filter="switchTest" lay-text="是|否">
+    </div>
+    {{# } }}
+  </script>
   <script>
-    layui.use(['layer', 'form'], function () {
-      var layer = layui.layer,
-              $ = layui.jquery,
+    layui.use(['table', 'form'], function(){
+      var table = layui.table,
               form = layui.form;
-    });
-    layui.use('table', function(){
-      var table = layui.table;
       table.render({
         elem: '#demo'
         ,url: "{:url('admin/users/indexall')}"
@@ -51,17 +67,33 @@
         ,page: true //开启分页
         ,defaultToolbar: ['filter', 'print', 'exports']
         ,cols: [[
-          {field: 'nickname', title: '昵称', align: 'center',width:'10%'}
-          ,{field: 'avatar', title: '头像', templet: '#avatar', align: 'center',width:'10%'}
+          {field: 'nickname', title: '昵称', align: 'center',width:'8%'}
+          ,{field: 'avatar', title: '头像', templet: '#avatar', align: 'center',width:'8%'}
           ,{field: 'mobile', title: '手机号', align: 'center',width:'10%'}
-          ,{field: 'balance', title: '余额', align: 'center',width:'10%'}
-          ,{field: 'is_enter', title: '是否入住', align: 'center',width:'10%'}
-          ,{field: 'is_auth', title: '是否认证', align: 'center',width:'10%'}
+          ,{field: 'balance', title: '余额', align: 'center',width:'8%'}
+          ,{field: 'is_enter', title: '是否入住', align: 'center',width:'8%'}
+          ,{field: 'is_auth', title: '是否认证', align: 'center',width:'8%'}
           ,{field: 'is_partner', title: '是否合伙人', align: 'center',width:'10%'}
+          ,{field: 'city', title: '城市', align: 'center',width:'10%'}
+          ,{field: 'signature', title: '个人简介', align: 'center',width:'10%'}
+          ,{field: 'skill', title: '技能', align: 'center',width:'10%'}
           ,{field: 'promote_qrcode', title: '推广二维码', templet: '#promote_qrcode', align: 'center',width:'10%'}
           ,{field: 'share_qrcode', title: '分享二维码', templet: '#share_qrcode', align: 'center',width:'10%'}
+          ,{field: 'isbu', title: '是否事业部', templet: '#isbu', align: 'center',width:'10%'}
           ,{field: 'reg_time', title: '注册时间', align: 'center',width:'10%'}
         ]]
+      });
+      //监听指定开关
+      form.on('switch(switchTest)', function(data){
+        var id = $(this).attr('tid');
+        var editswitch = '';
+        this.checked?editswitch=1:editswitch=0;
+        $.ajax({
+          url: "{:url('admin/users/edit_is_bu')}",
+          data: {id:id,switch: editswitch},
+          success: function (res) {
+          }
+        })
       });
       $('#serch').click(function () {
         table.reload('demo',{
@@ -71,15 +103,6 @@
         })
       })
     });
-  </script>
-  <script type="text/html" id="avatar">
-    <img src="{{d.avatar}}" height="100%" max-height="28px" onclick="show_img('{{d.avatar}}')">
-  </script>
-  <script type="text/html" id="promote_qrcode">
-    <img src="{{d.promote_qrcode}}" height="100%" max-height="28px" onclick="show_img('{{d.promote_qrcode}}')">
-  </script>
-  <script type="text/html" id="share_qrcode">
-    <img src="{{d.share_qrcode}}" height="100%" max-height="28px" onclick="show_img('{{d.share_qrcode}}')">
   </script>
   <script>
     function show_img(t) {

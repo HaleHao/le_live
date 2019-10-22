@@ -94,5 +94,12 @@ class Users extends Permissions
         }
     }
 
+    /**
+     * 编辑事业部状态
+     */
+    public function edit_is_bu(){
+        Db::name('users')->where('id',input('id'))->update(['is_bu'=>input('switch')]);
+    }
+
 
 }

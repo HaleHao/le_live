@@ -117,12 +117,12 @@ class Home extends Base
     }
 
     /**
-     *
+     * 是否显示
      */
     public function is_show()
     {
         $data = [
-            'is_show' => GetConfig('is_show_bar',0)
+            'is_show' => GetConfig('is_show_bar',1)
         ];
         return JsonSuccess($data);
     }

@@ -46,6 +46,7 @@ class Message extends Base
             }
             $list[$key]['create_time'] = date('m-d H:i:s', $val['create_time']);
             $images = json_decode($val['images'],true);
+            $arr = [];
             if ($images){
                 foreach($images as $v){
                     $arr[] = GetConfig('img_prefix', 'http://www.le-live.com').$v;
@@ -204,9 +205,13 @@ class Message extends Base
                     $content = '您的订单'.$val['order_no'].'已取消,稍后退款至微信';
                 }
             }
+
+            if ($val['order_status'] == 0){
+                $content = '订单'.$val['order_no'].'未支付';
+            }
             $list[$key]['content'] = $content;
 //            $list[$key]['update_time'] = date('m-d H:i:s', strtotime()$val['update_time']);
-            $list[$key]['avatar'] = 'http://192.168.1.18/uploads/admin/goods_image/20190912/fa94f97585fcc1044e391d048584d31e.jpg';
+            $list[$key]['avatar'] = GetConfig('img_prefix').'/uploads/admin/admin_thumb/20180104/1.jpg';
             $list[$key]['nickname'] = '乐Live';
         }
         $data = [

@@ -32,18 +32,24 @@ class Menus extends Base
         $column_id = $request->param('column_id');
 //        if ($column_id)
 //        $menus = Menus::where('column_id',$column_id)->select();
+        $type = $request->param('type',1);
         $page = $request->param('page', 1);
         $data = Db::name('menus')->alias('m')
             ->join('address a', ['m.user_id=a.user_id', 'a.type=2'], 'left')
             ->join('column c', ['m.column_id=c.id'], 'left')
             ->join('menus_like l', ['m.id=l.menu_id', 'l.user_id=' . $this->user_id . ''], 'left')
-            ->where('m.column_id', $column_id)->field(['m.id,m.title,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,c.title as label', 'l.id as is_like'])->page($page, 10)->select();
+            ->where('m.column_id', $column_id)
+            ->where('m.is_pick',1)
+            ->field(['m.id,m.title,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,c.title as label', 'l.id as is_like'])
+            ->page($page, 10)->select();
 
         $count = Db::name('menus')->alias('m')
             ->join('address a', ['m.user_id=a.user_id', 'a.is_default=1'], 'left')
             ->join('column c', ['m.column_id=c.id'], 'left')
             ->join('menus_like l', ['m.id=l.menu_id', 'l.user_id=' . $this->user_id . ''], 'left')
-            ->where('m.column_id', $column_id)->count();
+            ->where('m.column_id', $column_id)
+            ->where('m.is_pick',1)
+            ->count();
 
         if ($data) {
             $longitude = $request->param('longitude');
@@ -56,7 +62,9 @@ class Menus extends Base
                 $val['is_like'] = $val['is_like'] ? 1 : 0;
                 $val['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
             }
-            array_multisort($distance, SORT_ASC, $data);
+            if ($type == 1){
+                array_multisort($distance, SORT_ASC, $data);
+            }
         } else {
             $data = [];
         }
@@ -117,6 +125,9 @@ class Menus extends Base
             ->limit(3)
             ->select();
 
+        $comment_num = Db::name('menus_comment')
+            ->where('menu_id', $id)->count();
+        $menu->comment_num = $comment_num;
 
         $reserve = Db::name('menus_reserve')->alias('r')
             ->join('menus m', 'm.id = r.menu_id', 'left')
@@ -336,7 +347,6 @@ class Menus extends Base
         return JsonSuccess($data);
     }
 
-
     /**
      * 栏目列表
      */
@@ -367,7 +377,6 @@ class Menus extends Base
         return JsonSuccess($data);
     }
 
-
     /**
      * 是否认证
      */
@@ -385,7 +394,6 @@ class Menus extends Base
         ];
         return JsonSuccess($data);
     }
-
 
     /**
      * 发布菜品
