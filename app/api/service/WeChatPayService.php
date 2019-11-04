@@ -32,9 +32,9 @@ class WeChatPayService
 
     public function __construct()
     {
-//        $this->app_id = config('appid') ? config('appid') : $this->app_id;
-//        $this->mch_id = config('mch_id') ? config('mch_id') : $this->mch_id;
-//        $this->key = config('key') ? config('key') : $this->key;
+        $this->app_id = GetConfig('wx_app_id') ? GetConfig('wx_app_id') : $this->app_id;
+        $this->mch_id = GetConfig('mch_id') ? GetConfig('mch_id') : $this->mch_id;
+        $this->key = GetConfig('mch_key') ? GetConfig('mch_key') : $this->key;
 //        $this->SSLCERT_PATH = config('apiclient_cert') ? config('apiclient_cert') : $this->key;
 //        $this->SSLKEY_PATH = config('apiclient_key') ? config('apiclient_key') : $this->key;
 

@@ -16,6 +16,7 @@ use app\admin\model\MenusReserve;
 use app\admin\model\Users;
 use app\admin\model\UsersFollower;
 use app\admin\model\WalletLog;
+use app\api\service\AliyunSmsService;
 use app\api\service\UUDeliveryService;
 use app\api\service\WeChatPayService;
 use phpDocumentor\Reflection\DocBlockFactory;
@@ -41,24 +42,34 @@ class MenusOrder extends Base
 
 
         $price = 0;
+        $box_price = 0;
+        $menu_price = 0;
         foreach ($menu_ids as $key => $val) {
             $menu = Db::name('menus_reserve')->alias('r')
                 ->join('menus m', 'r.menu_id=m.id', 'left')
                 ->where('menu_id', $val['menu_id'])
-                ->field('m.*,r.price,r.total_amount,r.start_date,r.end_date,r.serving_date')
+                ->field('m.*,r.price,r.total_amount,r.start_date,r.end_date,r.serving_date,r.explain,r.finish_time')
                 ->find();
             $menus[] = $menu;
             $menus[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $menu['cover_image'];
+            $menus[$key]['price'] = $this->menus_price($menu['price']);
+
             $price += $menu['price'] * $val['amount'];
+
+            $menu_price +=  $this->menus_price($menu['price']) * $val['amount'];
+
+            $box_price += GetConfig('box_price', 1) * $val['amount'];
+
+            $finish_time[] = $menu['finish_time'];
         }
 
+
         $count = count(array_unique(array_column($menus, 'user_id')));
+
         if ($count !== 1) {
             return JsonError('菜品不是同一个微厨的');
         }
-        $start_min = min(array_column($menus, 'start_date'));
-        $end_min = min(array_column($menus, 'end_date'));
-        $total_price = $price;
+
 
         //配送地址
         $delivery_address = Db::name('address')
@@ -66,6 +77,15 @@ class MenusOrder extends Base
             ->where('type', 1)
             ->where('is_default', 1)
             ->find();
+
+        $address_id = $request->param('address_id');
+        if ($address_id) {
+            $delivery_address = Db::name('address')
+                ->where('user_id', $this->user_id)
+                ->where('type', 1)
+                ->where('id', $address_id)
+                ->find();
+        }
 
         //自提地址
         $pick_address = Db::name('address')
@@ -77,6 +97,27 @@ class MenusOrder extends Base
         } else {
             $is_pick = $pick_address['is_pick'];
         }
+
+        //判断是否自提
+        $delivery_type = $request->param('delivery_type');
+        $delivery_price = 0;
+        if ($delivery_type == 1) {
+//            if ($delivery_address && $pick_address) {
+//                //计算配送费
+//                $delivery = new UUDeliveryService();
+//                $price_token = $delivery->GetDeliveryPrice($pick_address, $delivery_address);
+//                if (!$price_token) {
+//                    return JsonError('订单配送费计算失败');
+//                }
+//                if ($price_token['return_code'] != 'ok') {
+//                    return JsonError($price_token['return_msg']);
+//                }
+//                $delivery_price = $price_token['need_paymoney'];
+//            }
+            $delivery_price = 5;
+        }
+        //计算总价 餐盒费+菜品费+配送费
+        $total_price = $menu_price + $delivery_price;
 
         $coupon_id = $request->param('coupon_id');
         $coupon = '';
@@ -95,19 +136,39 @@ class MenusOrder extends Base
             $preferential_price = $total_price;
         }
 
-        $num = ($end_min - $start_min) * 2 + 1;
-        $arr1 = [];
+
+        $start_min = min(array_column($menus, 'start_date'));
+        $end_min = min(array_column($menus, 'end_date'));
+        if($end_min == 0){
+            $end_min = '24:00';
+        }
+        $num = abs($end_min - $start_min) * 2 + 1;
         for ($i = 0; $i < $num; $i++) {
             $e = strtotime($start_min) + (($i + 1) * 1800);
-            if (date("H:i", $e) <= date('H:i', strtotime($end_min) + 1800)) {
+//            if (date("H:i", $e) <= date('H:i', strtotime($end_min) + 1800)) {
                 $arr1[$i] = date("H:i", $e);
-            }
+//            }
         }
+
+//        $num1 = ($end_min - $start_min) +
 
 //        for ($i=0;$i < $num;$i++){
 //            $e = strtotime($st)
 //        }
-//
+        $max_time = max($finish_time);
+//        var_dump($finish_time);
+//        exit;
+        $arr2 = [];
+        $num1 = abs($end_min - $start_min) + $max_time + 1;
+
+        for ($i = 0; $i < $num1; $i++) {
+            $e = strtotime($start_min) + ($i * 3600);
+//            if (date("H:i", $e) <= date('H:i', strtotime($end_min) + 3600)) {
+                $arr2[$i] = date("H:i", $e);
+//            }
+        }
+
+
         $data = [
             //用户的默认配送地址
             'delivery_address' => $delivery_address,
@@ -120,9 +181,13 @@ class MenusOrder extends Base
             //总价
             'total_price' => $total_price,
             //优惠价格
-            'preferential_price' => round($preferential_price,2),
+            'preferential_price' => $preferential_price,
+            //菜品价格
+            'menu_price' => $menu_price,
             //送达时间
             'serving_tme' => $arr1,
+
+            'finish_time' => $arr2,
 
             'serving_date' => $menu['serving_date'],
 
@@ -131,6 +196,14 @@ class MenusOrder extends Base
             'end_date' => $end_min,
 
             'is_pick' => $is_pick,
+
+            'explain' => $menu['explain'],
+
+            'max_time' => $max_time,
+
+            'delivery_price' => $delivery_price,
+
+            'box_price' => $box_price
         ];
         return JsonSuccess($data);
     }
@@ -181,26 +254,28 @@ class MenusOrder extends Base
         try {
 
             $price = 0;
+            $menu_price = 0;
+            $box_price = 0;
             foreach ($menu_ids as $val) {
                 $menu = Db::name('menus_reserve')->alias('r')
                     ->join('menus m', 'r.menu_id=m.id', 'left')
                     ->where('menu_id', $val['menu_id'])
-                    ->field('m.*,r.price,r.total_amount,r.start_date,r.end_date,r.serving_date')
+                    ->field('m.*,r.price,r.total_amount,r.start_date,r.end_date,r.serving_date,r.finish_time')
                     ->find();
                 if ($val['amount'] > $menu['total_amount']) {
                     return JsonError('菜品库存不足');
                 }
 
-                if ($menu['user_id'] == $this->user_id){
+                if ($menu['user_id'] == $this->user_id) {
                     return JsonError('不能预约自己的菜品');
                 }
                 $menus[] = $menu;
+                $finish_time[] = $menu['finish_time'];
                 $price += $menu['price'] * $val['amount'];
+                $menu_price += $this->menus_price($menu['price']) * $val['amount'];
             }
-            $total_price = $price;
 
-            $start_min = min(array_column($menus, 'start_date'));
-            $end_min = min(array_column($menus, 'end_date'));
+
 
             $count = count(array_unique(array_column($menus, 'user_id')));
             if ($count !== 1) {
@@ -214,6 +289,9 @@ class MenusOrder extends Base
 
             $send_address = [];
             //配送订单
+
+
+            $delivery_price = 0;
             if ($delivery_type == 1) {
 
                 $address_id = $request->param('address_id');
@@ -225,6 +303,21 @@ class MenusOrder extends Base
                 if (!$send) {
                     return JsonError('配送地址出错');
                 }
+
+                if ($send && $reci) {
+                    //计算配送费
+//                    $delivery = new UUDeliveryService();
+//                    $price_token = $delivery->GetDeliveryPrice($send, $reci);
+//                    if (!$price_token) {
+//                        return JsonError('订单配送费计算失败');
+//                    }
+//                    if ($price_token['return_code'] != 'ok') {
+//                        return JsonError($price_token['return_msg']);
+//                    }
+                    $delivery_price = 5;
+                }
+
+
                 //用户的收货地址
                 $send_address = [
                     'name' => $send['name'],
@@ -258,12 +351,29 @@ class MenusOrder extends Base
                 return JsonError('请选择送达时间');
             }
 
+            $start_min = min(array_column($menus, 'start_date'));
+            $end_min = min(array_column($menus, 'end_date'));
+
+            if ($end_min == 0){
+                $end_min = "24:00";
+            }
+
             $serving_date = date('H:i', strtotime($serving_time));
             $serving_month = date('Y-m-d', strtotime($serving_time));
-            $end_min1 = date('H:i', strtotime($end_min)+(30*60));
 
-            if ($serving_date < $start_min || $serving_date > $end_min1) {
-                return JsonError('送达时间选择错误');
+            if ($delivery_type == 1) {
+                $end_min1 = date('H:i', strtotime($end_min) + (30 * 60));
+                if ($serving_date < $start_min || $serving_date > $end_min1) {
+                    return JsonError('送达时间选择错误');
+                }
+            }
+
+            if ($delivery_type == 2) {
+                $max_time = max($finish_time);
+                $end_min1 = date('H:i', strtotime($end_min) + (3600 * $max_time));
+                if ($serving_date < $start_min || $serving_date > $end_min1) {
+                    return JsonError('送达时间选择错误');
+                }
             }
 
             $menu_time = date('Y-m-d', strtotime($menu['serving_date']));
@@ -272,6 +382,8 @@ class MenusOrder extends Base
             }
 
             //优惠券
+
+            $total_price = $menu_price + $delivery_price;
             $coupon_id = $request->param('coupon_id', 0);
             if ($coupon_id) {
                 $coupon = Db::name('users_coupon')->alias('u')
@@ -302,7 +414,10 @@ class MenusOrder extends Base
                 'pay_type' => 1,
                 'pay_price' => $preferential_price,
                 'total_price' => $total_price,
-                'preferential_price' => round($preferential_price,2),
+                'preferential_price' => $preferential_price,
+                'delivery_price' => $delivery_price,
+                'box_price' => $box_price,
+                'menu_price' => $menu_price,
                 'is_coupon' => $is_coupon,
                 'coupon_id' => $coupon_id,
                 'serving_time' => strtotime($serving_time),
@@ -400,7 +515,6 @@ class MenusOrder extends Base
         if (!$this->user_id) {
             return JsonLogin();
         }
-
         $type = $request->param('type', 1);
         $page = $request->param('page', 1);
         //待发货订单
@@ -469,7 +583,6 @@ class MenusOrder extends Base
         ];
         return JsonSuccess($data);
     }
-
 
     /**
      * 我卖出的订单详情
@@ -575,7 +688,7 @@ class MenusOrder extends Base
         try {
 
 
-            //TODO 给用户退款
+            //给用户退款
             $wechat = new WeChatPayService();
 
             //提前一天取消免责 否则扣除信誉度
@@ -585,6 +698,9 @@ class MenusOrder extends Base
                 return JsonError('退款失败');
             }
 
+
+
+
             if ($order->serving_date >= date("Y-m-d H:i", strtotime("+1 day"))) {
                 //免责
 
@@ -592,7 +708,7 @@ class MenusOrder extends Base
 
                 $log = new CreditLog();
                 $log->user_id = $this->user_id;
-                $log->content = '取消订单('.$order->order_no.')';
+                $log->content = '取消订单(' . $order->order_no . ')';
                 $log->number = (int)$order->pay_price / 10;
                 $log->type = 2;
                 $log->save();
@@ -600,7 +716,14 @@ class MenusOrder extends Base
                 $user->setDec('credit_line', (int)$order->pay_price / 10);
                 $user->save();
             } else {
-                return JsonError('该订单超过时间不能取消');
+                $log = new CreditLog();
+                $log->user_id = $this->user_id;
+                $log->content = '取消订单(' . $order->order_no . ')';
+                $log->number = (int)$order->pay_price / 20;
+                $log->type = 2;
+                $log->save();
+                $user->setDec('credit_line', (int)$order->pay_price / 20);
+                $user->save();
             }
 
             if ($order->coupon_id) {
@@ -627,11 +750,27 @@ class MenusOrder extends Base
             $order->order_status = 5;
 
             $order->save();
+
+
+
 //            }else{
 //                Db::rollback();
 //                return JsonError('订单退款失败');
 //            }
             Db::commit();
+
+            //给用户发送退款短信
+            $send_user = Users::where('id',$order->user_id)->find();
+            if ($send_user){
+                if ($send_user->mobile){
+                    $sms = new AliyunSmsService();
+                    $data = [
+                        'name' => $order->order_no
+                    ];
+                    $sms->sendSms($send_user->mobile,'SMS_176375238',$data);
+                }
+            }
+
             return JsonSuccess([], '取消订单成功');
 
         } catch (Exception $exception) {
@@ -820,6 +959,18 @@ class MenusOrder extends Base
                         return JsonError('退款失败');
                     }
 
+
+                    $send_user = Users::where('id',$order->user_id)->find();
+                    if ($send_user){
+                        if ($send_user->mobile){
+                            $sms = new AliyunSmsService();
+                            $data = [
+                                'name' => $order->order_no
+                            ];
+                            $sms->sendSms($send_user->mobile,'SMS_176375238',$data);
+                        }
+                    }
+
                     if ($order->coupon_id) {
                         Db::name('users_coupon')
                             ->where('coupon_id', $order->coupon_id)
@@ -839,7 +990,15 @@ class MenusOrder extends Base
                     }
                     $order->order_status = 5;
                     $order->save();
+
+
+
                     Db::commit();
+
+                    //给用户发送退款短信
+
+
+
                     return JsonSuccess([], '取消订单成功');
                 } else {
                     return JsonError('该订单超过时间不能取消');
@@ -874,23 +1033,15 @@ class MenusOrder extends Base
             if ($order->order_status != 2) {
                 return JsonError('当前订单不能确认收货');
             }
+
             $chef = Users::where('id', $order->chef_id)->find();
-
-            //微厨的余额明细
-            $log = new WalletLog();
-            $log->user_id = $order->chef_id;
-            $log->content = '订单（' . $order->order_no . '）';
-            $log->money = $order->pay_price;
-            $log->type = 1;
-            $log->save();
-
 
             if ($chef->first_user_id) {
                 //一级分销奖励
                 $first_user = Users::where('id', $chef->first_user_id)->find();
                 if ($first_user) {
                     if ($first_user->is_enter == 1) {
-                        $money = sprintf("%.2f", $order->total_price * (GetConfig('first_order_ratio', 1) / 100));
+                        $money = sprintf("%.2f", $order->menu_price * (GetConfig('first_order_ratio', 1) / 100));
                         $log = new EarningsLog();
                         $log->user_id = $chef->first_user_id;
                         $log->content = '订单（' . $order->order_no . '）奖励';
@@ -905,7 +1056,7 @@ class MenusOrder extends Base
                 $second_user = Users::where('id', $chef->second_user_id)->find();
                 if ($second_user) {
                     if ($second_user->is_enter == 1) {
-                        $money = sprintf("%.2f", $order->total_price * (GetConfig('second_order_ratio', 0.5) / 100));
+                        $money = sprintf("%.2f", $order->menu_price * (GetConfig('second_order_ratio', 0.5) / 100));
                         $log = new EarningsLog();
                         $log->user_id = $chef->second_user_id;
                         $log->content = '订单（' . $order->order_no . '）奖励';
@@ -920,13 +1071,22 @@ class MenusOrder extends Base
 
             $log = new CreditLog();
             $log->user_id = $chef->id;
-            $log->content = '完成订单('.$order->order_no.')';
+            $log->content = '完成订单(' . $order->order_no . ')';
             $log->number = 1;
             $log->type = 1;
             $log->save();
 
+
+            //微厨的余额明细
+            $log = new WalletLog();
+            $log->user_id = $order->chef_id;
+            $log->content = '订单（' . $order->order_no . '）';
+            $log->money = $order->menu_price;
+            $log->type = 1;
+            $log->save();
+
             $chef->setInc('credit_line', 1);
-            $chef->setInc('balance', $order->total_price);
+            $chef->setInc('balance', $order->menu_price);
 
             $order->order_status = 4;
             $order->save();
@@ -959,19 +1119,14 @@ class MenusOrder extends Base
             }
             $chef = Users::where('id', $order->chef_id)->find();
             //微厨的余额明细
-            $log = new WalletLog();
-            $log->user_id = $order->chef_id;
-            $log->content = '订单（' . $order->order_no . '）';
-            $log->money = $order->pay_price;
-            $log->type = 1;
-            $log->save();
+
 
             if ($chef->first_user_id) {
                 //一级分销奖励
                 $first_user = Users::where('id', $chef->first_user_id)->find();
                 if ($first_user) {
                     if ($first_user->is_enter == 1) {
-                        $money = sprintf("%.2f", $order->total_price * (GetConfig('first_order_ratio', 1) / 100));
+                        $money = sprintf("%.2f", $order->menu_price * (GetConfig('first_order_ratio', 1) / 100));
                         $log = new EarningsLog();
                         $log->user_id = $chef->first_user_id;
                         $log->content = '订单（' . $order->order_no . '）奖励';
@@ -986,7 +1141,7 @@ class MenusOrder extends Base
                 $second_user = Users::where('id', $chef->second_user_id)->find();
                 if ($second_user) {
                     if ($second_user->is_enter == 1) {
-                        $money = sprintf("%.2f", $order->total_price * (GetConfig('second_order_ratio', 0.5) / 100));
+                        $money = sprintf("%.2f", $order->menu_price * (GetConfig('second_order_ratio', 0.5) / 100));
                         $log = new EarningsLog();
                         $log->user_id = $chef->second_user_id;
                         $log->content = '订单（' . $order->order_no . '）奖励';
@@ -1001,13 +1156,20 @@ class MenusOrder extends Base
 
             $log = new CreditLog();
             $log->user_id = $chef->id;
-            $log->content = '完成订单('.$order->order_no.')';
+            $log->content = '完成订单(' . $order->order_no . ')';
             $log->number = 1;
             $log->type = 1;
             $log->save();
 
+            $log = new WalletLog();
+            $log->user_id = $order->chef_id;
+            $log->content = '订单（' . $order->order_no . '）';
+            $log->money = $order->menu_price;
+            $log->type = 1;
+            $log->save();
+
             $chef->setInc('credit_line', 1);
-            $chef->setInc('balance', $order->total_price);
+            $chef->setInc('balance', $order->menu_price);
             $order->order_status = 4;
             $order->save();
             Db::commit();
@@ -1068,7 +1230,6 @@ class MenusOrder extends Base
             if (!$menu) {
                 return JsonError('该菜谱不存在');
             }
-
 
             $parent_id = $request->param('parent_id', 0);
 

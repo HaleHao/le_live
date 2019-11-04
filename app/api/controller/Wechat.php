@@ -1,4 +1,5 @@
 <?php
+
 namespace app\api\controller;
 
 use app\admin\model\EarningsLog;
@@ -39,11 +40,16 @@ class Wechat extends Base
 
                 $user = Users::where('openid', $openid)->find();
                 if (!$user) {
+
+
                     $user = new Users();
                     $user->openid = $openid;
-
+                    $user->nickname = $nickname;
+                    $user->avatar = $avatar;
+                    $user->gender = $gender;
                     $user->signature = '这个人很懒, 啥也没写';
                     if ($first_user_id) {
+
                         $user->first_user_id = $first_user_id;
                         $second_user = Users::where('id', $first_user_id)->find();
                         if ($second_user) {
@@ -54,35 +60,34 @@ class Wechat extends Base
                     }
 
                     //分享奖励
-                    if ($red_packet_id){
+                    if ($red_packet_id) {
 
-                        $red_user = Users::where('id',$red_packet_id)->find();
+                        $red_user = Users::where('id', $red_packet_id)->find();
 
-                        if ($red_user){
+                        if ($red_user) {
+
                             $log = new WalletLog();
                             $log->user_id = $red_user->id;
-                            $log->content = '['.$nickname.']红包奖励';
-                            $log->money = GetConfig('red_packet_money',10);
+                            $log->content = '[' . $nickname . ']红包奖励';
+                            $log->money = GetConfig('red_packet_money', 10);
                             $log->type = 1;
                             $log->save();
-                            $red_user->setInc('balance',GetConfig('red_packet_money',10));
+                            $red_user->setInc('balance', GetConfig('red_packet_money', 10));
                         }
-
                     }
-
-
-
                 }
                 if (!$user->signature) {
                     $user->signature = '这个人很懒, 啥也没写';
                 }
                 $user->last_time = $time;
                 $user->last_ip = $_SERVER['REMOTE_ADDR'];
-                $user->nickname = $nickname;
-                $user->avatar = $avatar;
-                $user->gender = $gender;
+
 
                 if ($user->save()) {
+
+
+
+
 //                    $id = $user->getLastInsID();
                     //生成随机token
 //                    var_dump($user->id);exit;
@@ -90,23 +95,28 @@ class Wechat extends Base
 //                    $user->save();
 //                    var_dump(__PUBLIC__);
                     //推广二维码
-                    if (!$user->promote_qrcode) {
+                    $yes_user = Users::where('id',$user->id)->find();
+                    if (!$yes_user->promote_qrcode){
                         $res = new WeChatQrService('pages/distribution/protocol/protocol', $user->id);
-                        $user->promote_qrcode = $res->url;
-                        $user->save();
+                        $yes_user->promote_qrcode = $res->url;
+                        $yes_user->save();
                     }
+
+
                     //分享二维码
-                    if (!$user->share_qrcode) {
+                    if (!$yes_user->share_qrcode) {
                         $res = new WeChatQrService('pages/index/index', $user->id);
-                        $user->share_qrcode = $res->url;
+                        $yes_user->share_qrcode = $res->url;
                         $url = $this->createPoster($res->url);
-                        $user->red_poster = $url;
-                        $user->save();
+                        $yes_user->red_poster = $url;
+                        $yes_user->save();
                     }
                     $token = $this->saveCache($user->id);
                     $data = [
                         'token' => $token
                     ];
+
+
                     return JsonSuccess($data);
                 }
                 return JsonError('登录失败');
@@ -126,6 +136,9 @@ class Wechat extends Base
         return $token;
     }
 
+    /**
+     * 保存用户缓存
+     */
     public function saveUser(Request $request)
     {
         $user_id = $request->param('user_id');
@@ -144,11 +157,13 @@ class Wechat extends Base
         return $str;
     }
 
-    //生成海报
+    /**
+     * 生成海报
+     */
     public function createPoster($qrcode)
     {
-        $dst_path = ROOT_PATH.'public/uploads/qrcode/background.jpg';//背景图片路径
-        $src_path = ROOT_PATH.'public'.$qrcode;//覆盖图
+        $dst_path = ROOT_PATH . 'public/uploads/qrcode/background.jpg';//背景图片路径
+        $src_path = ROOT_PATH . 'public' . $qrcode;//覆盖图
         //创建图片的实例
         $image = \think\Image::open($src_path);
         // 按照原图的比例生成一个最大为200*200的缩略图并替换原来的图片(保存在原来的路径,文件名相同会被替换)
@@ -162,11 +177,11 @@ class Wechat extends Base
         imagecopymerge($dst, $src, 248, 854, 0, 0, $src_w, $src_h, 100);
         header("Content-type: image/png");
 
-        $str = date('YmdHis') . md5(time()+rand(1000000,9999999)) . '.jpg';
-        $filename = 'public/uploads/qrcode/' .$str;
-        $url = '/uploads/qrcode/' .$str;
+        $str = date('YmdHis') . md5(time() + rand(1000000, 9999999)) . '.jpg';
+        $filename = 'public/uploads/qrcode/' . $str;
+        $url = '/uploads/qrcode/' . $str;
 
-        imagepng($dst,ROOT_PATH.$filename);//根据需要生成相应的图片
+        imagepng($dst, ROOT_PATH . $filename);//根据需要生成相应的图片
 //    imagejpeg($dst,'../uploads/user/'.$uid.'.jpg');
         imagedestroy($dst);
         imagedestroy($src);

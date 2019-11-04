@@ -75,6 +75,7 @@ class Message extends Base
             ->join('users u', 'l.user_id=u.id', 'left')
             ->where('m.user_id', $this->user_id)
             ->field(['l.id', 'l.create_time', 'u.nickname', 'u.avatar', 'u.id as user_id', 'm.id as menu_id', 'm.title', 'm.introduce', 'm.cover_image'])
+            ->order('l.create_time','desc')
             ->page($page, 10)
             ->select();
         $count = Db::name('menus_like')->alias('l')
@@ -211,7 +212,7 @@ class Message extends Base
             }
             $list[$key]['content'] = $content;
 //            $list[$key]['update_time'] = date('m-d H:i:s', strtotime()$val['update_time']);
-            $list[$key]['avatar'] = GetConfig('img_prefix').'/uploads/admin/admin_thumb/20180104/1.jpg';
+            $list[$key]['avatar'] = GetConfig('img_prefix').'/uploads/admin/admin_thumb/20180104/1.png';
             $list[$key]['nickname'] = '乐Live';
         }
         $data = [
@@ -222,7 +223,6 @@ class Message extends Base
         return JsonSuccess($data);
 
     }
-
 
     /**
      * 消息回复

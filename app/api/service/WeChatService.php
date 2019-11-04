@@ -14,9 +14,9 @@ class WeChatService
 {
     protected $authorizationUrl = 'https://api.weixin.qq.com/sns/jscode2session';
 
-    protected $appid = 'wxdadaa1493ebcd7bf';
+    protected $appid = 'wx9e5aa98849a2e8bc';
 
-    protected $secret = 'fefd4e42938ff57c036e282655a237de';
+    protected $secret = '6484756f6180a7703d20e3b6bd1658bc';
 
     protected $template_id = '6TsQjY3xxibwOp0R7iMNuN6UpaGMG6v8ro56rmAf3HU';
 

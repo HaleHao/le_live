@@ -18,6 +18,7 @@ class Store extends Permissions
     {
         return $this->fetch();
     }
+
     public function index_all(){
         $info = Db::name('store')
             ->where('name','like',"%".input('keywords')."%")
@@ -184,6 +185,8 @@ class Store extends Permissions
     {
         return $this->fetch();
     }
+
+
     public function store_order_all(){
         input('status')>0?$where['m.order_status']=input('status')-1:$where='';
         input('store_type')&&$where['m.store_type']=input('store_type');

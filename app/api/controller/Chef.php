@@ -22,12 +22,19 @@ class Chef extends Base
         $type = $request->param('type', 1);
 
 
-        $list = Db::name('users')->where('is_enter', 1)->field(['id,image,nickname,skill,signature', 'credit_line'])
+        $list = Db::name('users')->where('is_enter', 1)->field(['id,image,nickname,skill,signature', 'credit_line','avatar'])
             ->page($page, 10)
             ->select();
         $count = Db::name('users')->where('is_enter', 1)->count();
         foreach ($list as $key => &$val) {
-            $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
+            if ($val['image']) {
+                $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
+            }
+            if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $val['avatar']) && $val['avatar']) {
+                $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['avatar'];
+            }else{
+                $list[$key]['avatar'] = $val['avatar'];
+            }
         }
         //按距离排序
         if ($type == 1) {
@@ -37,7 +44,7 @@ class Chef extends Base
                 ->join('address a', 'u.id=a.user_id', 'left')
                 ->where('u.is_enter', 1)
                 ->where('a.type', 2)
-                ->field(['u.id,u.image,u.nickname,u.skill,u.signature,a.longitude,a.latitude,u.credit_line'])
+                ->field(['u.id,u.image,u.nickname,u.skill,u.signature,a.longitude,a.latitude,u.credit_line','u.avatar'])
                 ->page($page, 10)
                 ->select();
             $count = Db::name('users')->alias('u')
@@ -49,7 +56,12 @@ class Chef extends Base
                 foreach ($list as $key => &$val) {
                     $form = [$val['longitude'], $val['latitude']];
                     $val['distance'] = GetDistance($form, $to);
-                    $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
+
+                    if ($val['image']){
+                        $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
+                    }else{
+                        $list[$key]['image'] = $val['image'];
+                    }
                     $distance[] = $list[$key]['distance'];
                 }
                 array_multisort($distance, SORT_ASC, $list);
@@ -58,14 +70,17 @@ class Chef extends Base
         //按人气排序
         if ($type == 2) {
             $list = Db::name('users')->where('is_enter', 1)
+                ->order('credit_line','desc')
                 ->order('like_num', 'desc')
                 ->order('fan_num', 'desc')
-                ->order('create_time', 'desc')->field(['id,image,nickname,skill,signature', 'credit_line'])
+                ->order('create_time', 'desc')->field(['id,image,nickname,skill,signature,credit_line,avatar'])
                 ->page($page, 10)
                 ->select();
             $count = Db::name('users')->where('is_enter', 1)->count();
             foreach ($list as $key => &$val) {
-                $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
+                if ($val['image']) {
+                    $list[$key]['image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['image'];
+                }
             }
         }
 
@@ -76,10 +91,8 @@ class Chef extends Base
         return JsonSuccess($data);
     }
 
-
     /**
      * 厨师详情
-     * Date: 2019/9/17 0017
      */
     public function detail(Request $request)
     {
@@ -113,17 +126,23 @@ class Chef extends Base
             ->where('m.id', '>', 0)
             ->where('l.user_id', $chef_id)->count();
 
+        $is_me = 0;
+        if ($this->user_id == $chef_id){
+            $is_me = 1;
+        }
+
+
         $data = [
             'detail' => $chef,
             'is_follower' => $is_follower,
             'reserve_num' => $reserve_num,
             'menus_num' => $menus_num,
-            'posts_num' => $posts_num
+            'posts_num' => $posts_num,
+            'is_me' => $is_me
         ];
 
         return JsonSuccess($data);
     }
-
 
     /**
      * 菜谱
@@ -146,6 +165,7 @@ class Chef extends Base
             $list[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
         }
         $count = Menus::where('user_id', $chef_id)->count();
+
         $data = [
             'list' => $list,
             'count' => $count
@@ -171,7 +191,7 @@ class Chef extends Base
             ->where('m.id', '>', 0)
             ->where('r.serving_date', '>', date('Y-m-d', time()))
             ->where('r.total_amount', '>', 0)
-            ->field(['m.id', 'm.title', 'm.introduce', 'm.cover_image', 'm.like_num', 'r.price', 'c.title as label', 'a.longitude', 'a.latitude', 'l.id as is_like'])
+            ->field(['m.id', 'm.title', 'm.introduce', 'm.cover_image', 'm.like_num', 'r.price', 'c.title as label', 'a.longitude', 'a.latitude', 'l.id as is_like','r.finish_time'])
             ->page($page, 10)->select();
         $count = Db::name('menus_reserve')->alias('r')
             ->join('menus m', 'm.id=r.menu_id and m.user_id=' . $chef_id . '', 'left')
@@ -180,8 +200,8 @@ class Chef extends Base
             ->where('r.total_amount', '>', 0)
             ->count();
 
-        $longitude = $request->param('longitude');
-        $latitude = $request->param('latitude');
+        $longitude = $request->param('longitude')?$request->param('longitude'):0;
+        $latitude = $request->param('latitude')?$request->param('latitude'):0;
         if ($list) {
             $to = [$longitude, $latitude];
             foreach ($list as $key => &$val) {
@@ -190,6 +210,7 @@ class Chef extends Base
                 $distance[] = $list[$key]['distance'];
                 $val['is_like'] = $val['is_like'] ? 1 : 0;
                 $list[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
+                $list[$key]['arrive_time'] = '25分钟';
             }
             array_multisort($distance, SORT_ASC, $list);
         }
@@ -199,7 +220,6 @@ class Chef extends Base
         ];
         return JsonSuccess($data);
     }
-
 
     /**
      * 动态
@@ -211,18 +231,23 @@ class Chef extends Base
             return JsonError('参数获取失败');
         }
         $page = $request->param('page', 1);
-        $query = Db::name('menus_log')->alias('l')
+        $list = Db::name('menus_log')->alias('l')
             ->join('menus m', 'l.menu_id=m.id', 'left')
             ->join('menus_reserve r', 'l.menu_id=r.menu_id', 'left')
             ->join('menus_like k', 'l.menu_id=k.menu_id and k.user_id=' . $this->user_id . '', 'left')
             ->where('m.id', '>', 0)
             ->where('l.user_id', $chef_id)
-            ->order('l.create_time', 'desc');
-        $query1 = clone $query;
-        $list = $query->page($page, 10)
-            ->field(['l.content', 'l.create_time', 'm.id', 'm.cover_image', 'l.type', 'm.like_num', 'k.id as is_like', 'm.introduce', 'r.price'])
+            ->order('l.create_time', 'desc')
+            ->page($page, 10)
+            ->field(['l.content', 'l.create_time', 'm.id', 'm.cover_image', 'l.type', 'm.like_num', 'k.id as is_like', 'm.introduce', 'r.price' ,'l.menu_id'])
             ->select();
-        $count = $query1->count();
+
+        $count = Db::name('menus_log')->alias('l')
+            ->join('menus m', 'l.menu_id=m.id', 'left')
+            ->join('menus_reserve r', 'l.menu_id=r.menu_id', 'left')
+            ->join('menus_like k', 'l.menu_id=k.menu_id and k.user_id=' . $this->user_id . '', 'left')
+            ->where('m.id', '>', 0)
+            ->where('l.user_id', $chef_id)->count();
         foreach ($list as $key => $val) {
             $list[$key]['is_like'] = $val['is_like'] ? 1 : 0;
             $list[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];

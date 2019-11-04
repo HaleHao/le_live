@@ -15,11 +15,14 @@ return [
     // 服务器地址
     'hostname'        => '127.0.0.1',
     // 数据库名
-    'database'        => 'le_live',
+//        'database'        => 'live_zx_xcx',
+        'database'        => 'le_live',
     // 用户名
+//    'username'        => 'live_zx_xcx',
     'username'        => 'root',
     // 密码
     'password'        => 'root',
+//    'password'        => 'FG43NDe26dGcBPzi',
     // 端口
     'hostport'        => '3306',
     // 连接dsn

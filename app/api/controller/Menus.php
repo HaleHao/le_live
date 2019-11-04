@@ -10,11 +10,14 @@ use app\admin\model\MenusComment;
 use app\admin\model\MenusImage;
 use app\admin\model\MenusLike;
 use app\admin\model\MenusLog;
+use app\admin\model\MenusNotice;
 use app\admin\model\MenusReserve;
 use app\admin\model\Users;
 use app\admin\model\Address;
 use app\admin\model\UsersFollower;
+use app\api\service\AliyunSmsService;
 use phpDocumentor\Reflection\DocBlock\Tags\Var_;
+use think\console\command\make\Model;
 use think\Db;
 use think\Exception;
 use think\Log;
@@ -23,7 +26,6 @@ use think\Validate;
 
 class Menus extends Base
 {
-
     /**
      * 获取菜品列表
      */
@@ -32,45 +34,47 @@ class Menus extends Base
         $column_id = $request->param('column_id');
 //        if ($column_id)
 //        $menus = Menus::where('column_id',$column_id)->select();
-        $type = $request->param('type',1);
+
         $page = $request->param('page', 1);
-        $data = Db::name('menus')->alias('m')
-            ->join('address a', ['m.user_id=a.user_id', 'a.type=2'], 'left')
-            ->join('column c', ['m.column_id=c.id'], 'left')
-            ->join('menus_like l', ['m.id=l.menu_id', 'l.user_id=' . $this->user_id . ''], 'left')
-            ->where('m.column_id', $column_id)
-            ->where('m.is_pick',1)
-            ->field(['m.id,m.title,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,c.title as label', 'l.id as is_like'])
-            ->page($page, 10)->select();
+//        $list = Db::name('menus')->alias('m')
+//            ->join('address a', ['m.user_id=a.user_id', 'a.type=2'], 'left')
+//            ->join('column c', ['m.column_id=c.id'], 'left')
+//            ->join('menus_like l', ['m.id=l.menu_id', 'l.user_id=' . $this->user_id . ''], 'left')
+//            ->where('m.column_id', $column_id)
+//            ->where('m.is_pick', 1)
+//            ->order('m.like_num', 'desc')
+//            ->order('m.collect_num', 'desc')
+//            ->field(['m.id,m.title,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,c.title as label', 'l.id as is_like'])
+//            ->page($page, 10)
+//            ->select();
+//        $count = Db::name('menus')->alias('m')
+//            ->join('address a', ['m.user_id=a.user_id', 'a.is_default=1'], 'left')
+//            ->join('column c', ['m.column_id=c.id'], 'left')
+//            ->join('menus_like l', ['m.id=l.menu_id', 'l.user_id=' . $this->user_id . ''], 'left')
+//            ->where('m.column_id', $column_id)
+//            ->where('m.is_pick', 1)
+//            ->count();
+        $type = $request->param('type');
 
-        $count = Db::name('menus')->alias('m')
-            ->join('address a', ['m.user_id=a.user_id', 'a.is_default=1'], 'left')
-            ->join('column c', ['m.column_id=c.id'], 'left')
-            ->join('menus_like l', ['m.id=l.menu_id', 'l.user_id=' . $this->user_id . ''], 'left')
-            ->where('m.column_id', $column_id)
-            ->where('m.is_pick',1)
-            ->count();
+        $longitude = $request->param('longitude')?$request->param('longitude'):0;
+        $latitude = $request->param('latitude')?$request->param('latitude'):0;
 
-        if ($data) {
-            $longitude = $request->param('longitude');
-            $latitude = $request->param('latitude');
-            $to = [$longitude, $latitude];
-            foreach ($data as $key => &$val) {
-                $form = [$val['longitude'], $val['latitude']];
-                $val['distance'] = GetDistance($form, $to);
-                $distance[] = $data[$key]['distance'];
+        if ($type == 1){
+            $list = Db::query("select ROUND(6378.138*2*ASIN(SQRT(POW(SIN((". $latitude ."*PI()/180-a.latitude*PI()/180)/2),2)+COS(". $latitude ."*PI()/180)*COS(a.latitude*PI()/180)*POW(SIN((". $longitude ."*PI()/180-a.longitude*PI()/180)/2),2)))*1000) AS distance,m.id,m.title,m.column_id,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,c.title as label,l.id as is_like FROM le_menus AS m LEFT JOIN le_address AS a ON a.type = 2 AND a.user_id=m.user_id LEFT JOIN le_column AS c ON m.column_id=c.id LEFT JOIN le_menus_like AS l ON l.user_id=". $this->user_id ." AND l.menu_id=m.id WHERE m.column_id=". $column_id ." having distance >=0 order by distance asc limit ". ($page-1)*10 .", 10;");
+        }else{
+            $list = Db::query("select ROUND(6378.138*2*ASIN(SQRT(POW(SIN((". $latitude ."*PI()/180-a.latitude*PI()/180)/2),2)+COS(". $latitude ."*PI()/180)*COS(a.latitude*PI()/180)*POW(SIN((". $longitude ."*PI()/180-a.longitude*PI()/180)/2),2)))*1000) AS distance,m.id,m.title,m.column_id,m.introduce,m.cover_image,m.like_num,a.longitude,a.latitude,c.title as label,l.id as is_like FROM le_menus AS m LEFT JOIN le_address AS a ON a.type = 2 AND a.user_id=m.user_id LEFT JOIN le_column AS c ON m.column_id=c.id LEFT JOIN le_menus_like AS l ON l.user_id=". $this->user_id ." AND l.menu_id=m.id WHERE m.column_id=". $column_id ." having distance >=0 order by m.like_num desc limit ". ($page-1)*10 .", 10;");
+        }
+
+        if ($list) {
+            foreach ($list as $key => &$val) {
                 $val['is_like'] = $val['is_like'] ? 1 : 0;
                 $val['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
+                $val['distance'] = round($val['distance']/1000,2);
             }
-            if ($type == 1){
-                array_multisort($distance, SORT_ASC, $data);
-            }
-        } else {
-            $data = [];
         }
         $return = [
-            'list' => $data,
-            'count' => $count,
+            'list' => $list,
+//            'count' => $count,
         ];
         return JsonSuccess($return);
     }
@@ -89,8 +93,16 @@ class Menus extends Base
             ->where('id', $id)
             ->field(['id', 'title', 'introduce', 'user_id', 'is_reserve', 'like_num', 'collect_num', 'comment_num', 'create_time'])
             ->find();
+
+        $notice = MenusNotice::where('user_id', $this->user_id)->where('menu_id', $id)->where('status', 0)->find();
+
+        $is_notice = 0;
+        if ($notice) {
+            $is_notice = 1;
+        }
+
         $is_me = 0;
-        if ($menu->user_id == $this->user_id){
+        if ($menu->user_id == $this->user_id) {
             $is_me = 1;
         }
         if (!$menu) {
@@ -98,13 +110,13 @@ class Menus extends Base
         }
 
         if ($menu->reserve) {
-            if ($menu->reserve['serving_date'] > date('Y-m-d')){
+            if ($menu->reserve['serving_date'] > date('Y-m-d')) {
                 $menu['is_reserve'] = 1;
-                $menu['price'] = $menu->reserve->price;
-            }else{
+
+            } else {
                 $menu['is_reserve'] = 0;
-                $menu['price'] = 0;
             }
+            $menu['price'] = $this->menus_price($menu->reserve->price);
 
         } else {
             $menu['is_reserve'] = 0;
@@ -112,10 +124,12 @@ class Menus extends Base
         }
         $chef = Users::where('u.id', $menu->user_id)->alias('u')
             ->join('users_follower f', 'u.id=f.chef_id and f.user_id=' . $this->user_id, 'left')
-            ->field(['u.id,u.nickname,u.avatar,u.city,u.signature', 'u.create_time', 'f.id as is_follower', 'u.credit_line'])
+            ->field(['u.id,u.nickname,u.avatar,u.city,u.signature,u.reg_time as create_time, f.id as is_follower,u.credit_line'])
             ->find();
 
         $chef->is_follower = $chef->is_follower ? 1 : 0;
+
+//        $chef->create_time = $menu->create_time;
 
         $comment = Db::name('menus_comment')->alias('c')
             ->join('users u', 'c.user_id =u.id', 'left')
@@ -132,13 +146,15 @@ class Menus extends Base
         $reserve = Db::name('menus_reserve')->alias('r')
             ->join('menus m', 'm.id = r.menu_id', 'left')
             ->where('r.serving_date', $menu->reserve['serving_date'])
-            ->where('r.user_id',$menu->user_id)
+            ->where('r.user_id', $menu->user_id)
+            ->where('r.serving_date', '>', date('Y-m-d'))
 //            ->where('r.menu_id','<>',$id)
-            ->field(['m.id,m.title,m.cover_image', 'r.price'])
+            ->field(['m.id,m.title,m.cover_image,r.price'])
             ->select();
 
         foreach ($reserve as $key => $val) {
             $reserve[$key]['cover_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $val['cover_image'];
+            $reserve[$key]['price'] = $this->menus_price($val['price']);
         }
 
         $comment = ToTree($comment);
@@ -172,6 +188,7 @@ class Menus extends Base
             'menus' => $menus,
             'reserve' => $reserve,
             'is_me' => $is_me,
+            'is_notice' => $is_notice,
         ];
 
         return JsonSuccess($data);
@@ -298,7 +315,7 @@ class Menus extends Base
         $comment->type = 1;
 
         if ($images = $request->param('images')) {
-            $comment->images = json_encode(json_decode($images,true));
+            $comment->images = json_encode(json_decode($images, true));
         }
         if ($comment->save()) {
             return JsonSuccess([], '评论成功');
@@ -396,6 +413,31 @@ class Menus extends Base
     }
 
     /**
+     * 是否设置了自提地址
+     */
+    public function is_address()
+    {
+        if (!$this->user_id){
+            return JsonLogin();
+        }
+        $user = Users::where('id',$this->user_id)->find();
+        if (!$user){
+            return JsonLogin();
+        }
+
+        $address = Address::where('user_id',$this->user_id)->where('type',2)->find();
+        $is_address = 0;
+        if ($address){
+            $is_address = 1;
+        }
+
+        $data = [
+            'is_address' => $is_address
+        ];
+        return JsonSuccess($data);
+    }
+
+    /**
      * 发布菜品
      */
     public function publish(Request $request)
@@ -459,8 +501,11 @@ class Menus extends Base
             $log->user_id = $this->user_id;
             $log->save();
 
+
+
+
             Db::commit();
-            return JsonSuccess(['id' => $id], '发布成功');
+            return JsonSuccess(['id' => $id, 'chef_id' => $this->user_id], '发布成功');
         } catch (Exception $exception) {
             Db::rollback();
             return JsonError('发布失败');
@@ -494,8 +539,6 @@ class Menus extends Base
             ['end_time', 'require', '结束时间'],
             ['price', 'require', '请填写价格'],
             ['total_amount', 'require', '请填写总份数'],
-//            ['explain', 'require', '请填写微厨想说'],
-//            ['finish_time', 'require', '请选择菜谱完成后时间'],
         ]);
         if (!$validate->check($data)) {
             return JsonError($validate->getError());
@@ -509,7 +552,7 @@ class Menus extends Base
             return JsonError('不能发布七天后的预约');
         }
 
-        if (date('H:i', strtotime($data['end_time'])) <= date('H:i', strtotime($data['start_time']))){
+        if (date('H:i', strtotime($data['end_time'])) <= date('H:i', strtotime($data['start_time']))) {
             return JsonError('结束时间要大于开始时间');
         }
 
@@ -552,15 +595,15 @@ class Menus extends Base
             $reserve->is_pick = $is_pick;
             if ($is_pick == 1) {
                 $address = Address::where('user_id', $this->user_id)->where('type', 2)->find();
-                if (!$address){
-                    return JsonError('你没有设置自提地址',20002);
+                if (!$address) {
+                    return JsonError('你没有设置自提地址', 20002);
                 }
                 $address->is_pick = $is_pick;
                 $address->save();
                 $reserve->address_id = $address->id;
-            }else{
+            } else {
                 $address = Address::where('user_id', $this->user_id)->where('type', 2)->find();
-                if ($address){
+                if ($address) {
                     $address->is_pick = $is_pick;
                     $address->save();
                 }
@@ -583,13 +626,43 @@ class Menus extends Base
 //            $menu = MenusModel::where('id', $data['menu_id'])->where('user_id', $this->user_id)->find();
 //            $menu->is_reserve = 1;
 //            $menu->save();
+
+            //TODO 发送通知
+            $notice = Db::name('menus_notice')->alias('n')
+                ->join('users u','n.user_id=u.id','left')
+                ->where('n.menu_id',$data['menu_id'])
+                ->where('n.status',0)
+                ->select();
+            foreach($notice as $item){
+                $data = [
+                    'name' => $this->filterEmoji($item['nickname']),
+                ];
+                $mobile = $item['mobile'];
+                if ($mobile){
+                    $sms = new AliyunSmsService();
+                    $sms->sendSms($mobile,'SMS_176450119',$data);
+                }
+            }
             Db::commit();
-            return JsonSuccess(['id' => $id]);
+            return JsonSuccess(['id' => $id, 'chef_id' => $this->user_id]);
 
         } catch (Exception $exception) {
             Db::rollback();
             return JsonError('提交失败');
         }
+    }
+
+    /**
+     * 价格说明
+     */
+    public function explain()
+    {
+        $explain = Db::name('price_explain')->order('id','desc')->find();
+        $data = [
+            'name' => $explain['name'],
+            'content' => $explain['content'],
+        ];
+        return JsonSuccess($data);
     }
 
     /**
@@ -658,4 +731,41 @@ class Menus extends Base
         ];
         return JsonSuccess($data);
     }
+
+    /**
+     * 上架通知
+     */
+    public function on_notice(Request $request)
+    {
+        if (!$this->user_id) {
+            return JsonLogin();
+        }
+
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
+            return JsonLogin();
+        }
+
+        $menu_id = $request->param('menu_id');
+        if (!$menu_id) {
+            return JsonError('参数获取失败');
+        }
+
+        $menu = \app\admin\model\Menus::where('id', $menu_id)->find();
+        if (!$menu) {
+            return JsonError('数据获取失败');
+        }
+
+        $notice = new MenusNotice();
+        $notice->user_id = $this->user_id;
+        $notice->menu_id = $menu_id;
+        $notice->status = 0;
+        $notice->add_time = date('Y-m-d H:i:s');
+        if ($notice->save()) {
+            return JsonSuccess();
+        }
+        return JsonError();
+
+    }
+
 }

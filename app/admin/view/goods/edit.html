@@ -1,422 +1,571 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>layui</title>
-  <meta name="renderer" content="webkit">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css"  media="all">
-  <link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css" media="all" />
-  <link rel="stylesheet" href="__CSS__/admin.css"  media="all">
+    <meta charset="utf-8">
+    <title>layui</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="__PUBLIC__/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="__PUBLIC__/font-awesome/css/font-awesome.min.css" media="all"/>
+    <link rel="stylesheet" href="__CSS__/admin.css" media="all">
 </head>
 <style>
-  .input-group .form-control, .input-group-addon, .input-group-btn {
-    display: -webkit-box;
-    display: -webkit-flex;
-    display: -ms-flexbox;
-    display: flex;
-    -webkit-box-orient: vertical;
-    -webkit-box-direction: normal;
-    -webkit-flex-direction: column;
-    -ms-flex-direction: column;
-    flex-direction: column;
-    -webkit-box-pack: center;
-    -webkit-justify-content: center;
-    -ms-flex-pack: center;
-    justify-content: center;
-  }
+    .input-group .form-control, .input-group-addon, .input-group-btn {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -webkit-flex-direction: column;
+        -ms-flex-direction: column;
+        flex-direction: column;
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
+        -ms-flex-pack: center;
+        justify-content: center;
+    }
 
-  .file-item-delete {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: #ff4544;
-    color: #fff;
-    width: 1.25rem;
-    height: 1.25rem;
-    line-height: 1.1rem;
-    text-align: center;
-    border-radius: 0 2px 0 2px;
-    cursor: pointer;
-    opacity: .25;
-    border: 1px solid #ee4140;
-    z-index: 2;
-  }
-  .file-item-delete:hover {
-    opacity: 1;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
-  }
-  .thumb {margin-left:5px; margin-top:15px; height:128px}
-  #prevModal {width:100%; height:100%; text-align:center;display: none;}
-  #img_prev {max-width:98%; max-height:98%; margin: 10px auto}
-  .dtr{display: flex;width: 800px !important;}
-  .dtro{float: left;width: 77px;text-align: center;line-height: 38px;background: #eceeef;}
-  .dtrt{float: left;}
-  .dtrf{float: left;line-height: 38px;text-align: center;width: 50px;background: #eceeef;}
-  .dtd{display: flex;width: 100%;}
-  .dtdo{float: left;width: 50px;text-align: center;height: 30px;line-height: 30px;background: #eceeef;}
-  .dtdt{float: left;line-height: 30px !important;height: 30px !important;}
-  .dtdf{float: left;height: 30px;line-height: 30px;text-align: center;width: 38px;background: #eceeef;}
-  .dtt{border: 1px solid #eee;width: 800px!important;padding: 10px;}
-  .dtto{display: flex;padding: 0 0 5px 0;}
-  .dttoo{background: #eee;color: #fff;width: 1rem;height: 1rem;text-align: center;line-height: 1rem; border-radius: 999px;}
-  .dttt{display: -webkit-box;}
-  .dttto{display: -webkit-box;background: #eee;margin-right:1rem;overflow: hidden;}
-  .dtttot{padding:0 7px;display: inline-block;line-height: 30px;}
-  .dtttof{padding: 0.35rem 0.79rem;background: #d4cece;color: #fff;font-size: 1rem;font-weight: bold;}
-  .dtdta{line-height: 30px !important;height: 30px !important;}
-  .ctv{width: 80% !important;}
-  .son{display: -webkit-box}
-  .editinp{width: 100%;height: 18px;margin: 0 5px 0 5px;margin-right: 10px;}
-  .editinpi{margin: 0 5px 0 5px;width: 50px;}
+    .file-item-delete {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #ff4544;
+        color: #fff;
+        width: 1.25rem;
+        height: 1.25rem;
+        line-height: 1.1rem;
+        text-align: center;
+        border-radius: 0 2px 0 2px;
+        cursor: pointer;
+        opacity: .25;
+        border: 1px solid #ee4140;
+        z-index: 2;
+    }
+
+    .file-item-delete:hover {
+        opacity: 1;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+    }
+
+    .thumb {
+        margin-left: 5px;
+        margin-top: 15px;
+        height: 128px
+    }
+
+    #prevModal {
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        display: none;
+    }
+
+    #img_prev {
+        max-width: 98%;
+        max-height: 98%;
+        margin: 10px auto
+    }
+
+    .dtr {
+        display: flex;
+        width: 800px !important;
+    }
+
+    .dtro {
+        float: left;
+        width: 77px;
+        text-align: center;
+        line-height: 38px;
+        background: #eceeef;
+    }
+
+    .dtrt {
+        float: left;
+    }
+
+    .dtrf {
+        float: left;
+        line-height: 38px;
+        text-align: center;
+        width: 50px;
+        background: #eceeef;
+    }
+
+    .dtd {
+        display: flex;
+        width: 100%;
+    }
+
+    .dtdo {
+        float: left;
+        width: 50px;
+        text-align: center;
+        height: 30px;
+        line-height: 30px;
+        background: #eceeef;
+    }
+
+    .dtdt {
+        float: left;
+        line-height: 30px !important;
+        height: 30px !important;
+    }
+
+    .dtdf {
+        float: left;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        width: 38px;
+        background: #eceeef;
+    }
+
+    .dtt {
+        border: 1px solid #eee;
+        width: 800px !important;
+        padding: 10px;
+    }
+
+    .dtto {
+        display: flex;
+        padding: 0 0 5px 0;
+    }
+
+    .dttoo {
+        background: #eee;
+        color: #fff;
+        width: 1rem;
+        height: 1rem;
+        text-align: center;
+        line-height: 1rem;
+        border-radius: 999px;
+    }
+
+    .dttt {
+        display: -webkit-box;
+    }
+
+    .dttto {
+        display: -webkit-box;
+        background: #eee;
+        margin-right: 1rem;
+        overflow: hidden;
+    }
+
+    .dtttot {
+        padding: 0 7px;
+        display: inline-block;
+        line-height: 30px;
+    }
+
+    .dtttof {
+        padding: 0.35rem 0.79rem;
+        background: #d4cece;
+        color: #fff;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+
+    .dtdta {
+        line-height: 30px !important;
+        height: 30px !important;
+    }
+
+    .ctv {
+        width: 80% !important;
+    }
+
+    .son {
+        display: -webkit-box
+    }
+
+    .editinp {
+        width: 100%;
+        height: 18px;
+        margin: 0 5px 0 5px;
+        margin-right: 10px;
+    }
+
+    .editinpi {
+        margin: 0 5px 0 5px;
+        width: 50px;
+    }
 </style>
 <body id="body">
 <div class="tplay-body-div">
-  <div class="layui-tab">
-    <div class="back">
-      <a href="javascript:history.go(-1)" class="layui-btn layui-btn-primary"><i class="layui-icon"></i>返回</a>
-    </div>
-  </div>
-  <div style="margin-top: 20px;">
-  </div>
-  <form class="layui-form" id="admin">
-    <input name="id" value="{$goods.id}" type="hidden">
-    <div class="layui-form-item">
-      <label class="layui-form-label required">标题</label>
-      <div class="layui-input-block" style="max-width:600px;">
-        <input name="title" lay-verify="required" value="{$goods.title}" autocomplete="off" placeholder="请输入标题" class="layui-input" type="text">
-      </div>
-    </div>
-
-    <div class="layui-form-item">
-      <label class="layui-form-label required">单位</label>
-      <div class="layui-input-block" style="max-width:600px;">
-        <input name="unit" lay-verify="required" autocomplete="off" value="{$goods.unit}" placeholder="请输入标题" value="件" class="layui-input" type="text">
-      </div>
-    </div>
-
-    <div class="layui-form-item">
-      <div class="layui-inline">
-        <label class="layui-form-label">价格</label>
-        <div class="layui-input-inline" style="width: 100px;">
-          <input type="text" name="price" placeholder="￥" value="{$goods.price}" autocomplete="off" class="layui-input">
+    <div class="layui-tab">
+        <div class="back">
+            <a href="javascript:history.go(-1)" class="layui-btn layui-btn-primary"><i class="layui-icon"></i>返回</a>
         </div>
-      </div>
     </div>
-
-
-    <div class="layui-form-item">
-      <label class="layui-form-label">排序</label>
-      <div class="layui-input-block" style="max-width:200px;">
-        <input name="sort" autocomplete="off" placeholder="请输入排序" class="layui-input" value="{$goods.sort}" type="number">
-      </div>
+    <div style="margin-top: 20px;">
     </div>
-
-
-    <div class="layui-form-item">
-      <label class="layui-form-label required">图片</label>
-      <div class="layui-input-block" style="max-width:600px;">
-        <input name="image" readonly="readonly" lay-verify="required" value="{$goods.cover_image}" autocomplete="off" style="margin-right: 0px;" class="layui-input layui-input-inline image" type="text">
-        <button type="button" class="layui-btn layui-btn-primary" id="thumb"><i class="fa fa-cloud-upload"></i></button>
-        <div class="upload-more">
-          {foreach name="goods.image" item="val"}
-          <div class="upload-preview" id="image{$val.id}" style="display: inline-block;overflow: hidden;position: relative;width: 80px;height: 80px;margin: 5px 0;margin-right: 5px">
-            <input type="hidden" name="images[]" value="{$val.image}">
-            <img class="layui-upload-img" style="" width="80" height="80" src="{$val.image}">
-            <span class="file-item-delete" onclick="del_image('{$val.id}')">×</span>
-          </div>
-          {/foreach}
-          <!--<div class="upload-preview" style="display: inline-block;overflow: hidden;position: relative;width: 80px;height: 80px;margin: 5px 0;margin-right: 5px;">-->
-          <!--<img class="layui-upload-img" style="" id="demo1" width="80" height="80">-->
-          <!--<span class="file-item-delete">×</span>-->
-          <!--</div>-->
-        </div>
-      </div>
-    </div>
-
-    <!--规格-->
-
-    <div class="layui-form-item">
-      <label class="layui-form-label">规格组</label>
-      <div class="layui-input-inline dtr">
-        <div class="dtro">规格组</div>
-        <div class="dtrt">
-          <input name="spec" id="specval" value="{$goods.spec_team}" lay-verify="required" autocomplete="off" placeholder="颜色、尺码等" class="layui-input" type="text">
-        </div>
-        <div class="dtrf addspec">添加</div>
-      </div>
-    </div>
-
-    <div id="ggz">
-
-      <div class="layui-form-item" id="{$goods.id}spec">
-        <label class="layui-form-label"></label>
-        <div class="dtb">
-          <div class="layui-input-inline dtt">
-            <div class="dtto">
-              <div><b>{$goods.spec_team}</b></div>
-              <a class="dttoo delspec" onclick="delone({$goods.id})">×</a>
+    <form class="layui-form" id="admin">
+        <input name="id" value="{$goods.id}" type="hidden">
+        <div class="layui-form-item">
+            <label class="layui-form-label required">标题</label>
+            <div class="layui-input-block" style="max-width:600px;">
+                <input name="title" lay-verify="required" value="{$goods.title}" autocomplete="off" placeholder="请输入标题"
+                       class="layui-input" type="text">
             </div>
-            <div class="dttt">
-              <div class="son" id="son">
-                {notempty name="$spec"}
-                {volist name="$spec" id="vv"}
-                <div class="dttto" id="{$vv.id}cl">
-                  <span class="dtttot">{$vv.name}</span>
-                  <a class="dtttof" onclick="delspecson({$vv.id})">×</a>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label required">单位</label>
+            <div class="layui-input-block" style="max-width:600px;">
+                <input name="unit" lay-verify="required" autocomplete="off" value="{$goods.unit}" placeholder="请输入标题"
+                       value="件" class="layui-input" type="text">
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-inline">
+                <label class="layui-form-label">价格</label>
+                <div class="layui-input-inline" style="width: 100px;">
+                    <input type="text" name="price" placeholder="￥" value="{$goods.price}" autocomplete="off"
+                           class="layui-input">
                 </div>
-                {/volist}
-                {/notempty}
-              </div>
-              <div class="dtd">
-                <div class="dtdo">规格值</div>
-                <div class="dtdt"><input name="spec" lay-verify="required" id="{$vv['id']}spectwo" autocomplete="off" placeholder="颜色、尺码等" class="layui-input dtdta" type="text"></div>
-                <div class="dtdf" onclick="addspecson({$vv['id']})">添加</div>
-              </div>
             </div>
-          </div>
         </div>
-      </div>
-
-    </div>
-
-    <div class="layui-form-item">
-      <label class="layui-form-label">库存价格</label>
-      <div class="layui-input-inline ctv">
-        <table class="layui-table" lay-size="sm" id="table">
-          <thead>
-          <tr>
-          {notempty name="$goods.spec_team"}
-
-            <th>{$goods.spec_team}</th>
-
-          {/notempty}
-          <th>库存   <input style="height: 22px;width: 80px;" type="text" class="layui-input layui-input-inline editinpi" id="setinventory">
-            <a class="layui-btn layui-btn-xs layui-btn-primary" href="javascript:;" onclick="setinventory()">一键设置</a></th>
-          <th>价格   <input style="height: 22px;width: 80px;" type="text" class="layui-input layui-input-inline editinpi" id="setgrowth">
-            <a class="layui-btn layui-btn-xs layui-btn-primary" onclick="setgrowth()">一键设置</a></th>
-          </tr>
-          </thead>
-          <tbody>
-          {notempty name="$spec"}
-            {volist name="$spec" id="v"}
-            <tr>
-              <td>{$v.name}</td>
-              <td><input type="text" style="height: 22px;width: 80px;" class="layui-input layui-input-inline editinp a" value="{$v.inventory}" name="inventory[]"></td>
-              <td><input type="text" style="height: 22px;width: 80px;" class="layui-input layui-input-inline editinp b" value="{$v.price}" name="growth[]"></td>
-            </tr>
-            {/volist}
-          {/notempty}
-          </tbody>
-        </table>
-      </div>
-    </div>
 
 
-    <div class="layui-form-item layui-form-text">
-      <label class="layui-form-label required">商品描述</label>
-      <div class="layui-input-block" style="max-width:1000px;">
-        <textarea placeholder="请输入内容" class="layui-textarea" name="description" id="container" style="border:0;padding:0;height: 200px;"></textarea>
-      </div>
-    </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">排序</label>
+            <div class="layui-input-block" style="max-width:200px;">
+                <input name="sort" autocomplete="off" placeholder="请输入排序" class="layui-input" value="{$goods.sort}"
+                       type="number">
+            </div>
+        </div>
 
 
-    <input type="hidden" id="edit_value" name="edit_value" {notempty name="$goods.edit_value"} value='{$goods.edit_value}'{/notempty}>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">图片</label>
+            <div class="layui-input-block" style="max-width:600px;">
+                <input name="image" readonly="readonly" lay-verify="required" value="{$goods.cover_image}"
+                       autocomplete="off" style="margin-right: 0px;" class="layui-input layui-input-inline image"
+                       type="text">
+                <button type="button" class="layui-btn layui-btn-primary" id="thumb"><i class="fa fa-cloud-upload"></i>
+                </button>
+                <div class="upload-more">
+                    {foreach name="goods.image" item="val"}
+                    <div class="upload-preview" id="image{$val.id}"
+                         style="display: inline-block;overflow: hidden;position: relative;width: 80px;height: 80px;margin: 5px 0;margin-right: 5px">
+                        <input type="hidden" name="images[]" value="{$val.image}">
+                        <img class="layui-upload-img" style="" width="80" height="80" src="{$val.image}">
+                        <span class="file-item-delete" onclick="del_image('{$val.id}')">×</span>
+                    </div>
+                    {/foreach}
+                    <!--<div class="upload-preview" style="display: inline-block;overflow: hidden;position: relative;width: 80px;height: 80px;margin: 5px 0;margin-right: 5px;">-->
+                    <!--<img class="layui-upload-img" style="" id="demo1" width="80" height="80">-->
+                    <!--<span class="file-item-delete">×</span>-->
+                    <!--</div>-->
+                </div>
+            </div>
+        </div>
+
+        <!--规格-->
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">规格组</label>
+            <div class="layui-input-inline dtr">
+                <div class="dtro">规格组</div>
+                <div class="dtrt">
+                    <input name="spec" id="specval" value="{$goods.spec_team}" lay-verify="required" autocomplete="off"
+                           placeholder="颜色、尺码等" class="layui-input" type="text">
+                </div>
+                <div class="dtrf addspec" style="display: none;">添加</div>
+            </div>
+        </div>
+
+        <div id="ggz">
+
+            <div class="layui-form-item" id="{$goods.id}spec">
+                <label class="layui-form-label"></label>
+                <div class="dtb">
+                    <div class="layui-input-inline dtt">
+                        <div class="dtto">
+                            <div><b>{$goods.spec_team}</b></div>
+                            <a class="dttoo delspec" onclick="delone({$goods.id})">×</a>
+                        </div>
+                        <div class="dttt">
+                            <div class="son" id="son">
+                                {notempty name="$spec"}
+                                {volist name="$spec" id="vv"}
+                                <div class="dttto" id="{$vv.id}cl">
+                                    <span class="dtttot">{$vv.name}</span>
+                                    <a class="dtttof" onclick="delspecson({$vv.id})">×</a>
+                                </div>
+                                {/volist}
+                                {/notempty}
+                            </div>
+                            <div class="dtd">
+                                <div class="dtdo">规格值</div>
+                                <div class="dtdt"><input name="spec" lay-verify="required" id="{$vv['id']}spectwo"
+                                                         autocomplete="off" placeholder="颜色、尺码等"
+                                                         class="layui-input dtdta" type="text"></div>
+                                <div class="dtdf" onclick="addspecson({$vv['id']})">添加</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">库存价格</label>
+            <div class="layui-input-inline ctv">
+                <table class="layui-table" lay-size="sm" id="table">
+                    <thead>
+                    <tr>
+                        {notempty name="$goods.spec_team"}
+
+                        <th>{$goods.spec_team}</th>
+
+                        {/notempty}
+                        <th>库存
+                            <input style="height: 22px;width: 80px;" type="text"
+                                   class="layui-input layui-input-inline editinpi" id="setinventory">
+                            <a class="layui-btn layui-btn-xs layui-btn-primary" href="javascript:;"
+                               onclick="setinventory()">一键设置</a>
+                        </th>
+                        <th>价格
+                            <input style="height: 22px;width: 80px;" type="text"
+                                   class="layui-input layui-input-inline editinpi" id="setgrowth">
+                            <a class="layui-btn layui-btn-xs layui-btn-primary" onclick="setgrowth()">一键设置</a>
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {notempty name="$spec"}
+                    {volist name="$spec" id="v"}
+                    <tr>
+                        <td>{$v.name}</td>
+                        <td><input type="text" style="height: 22px;width: 80px;"
+                                   class="layui-input layui-input-inline editinp a" value="{$v.inventory}"
+                                   name="inventory[]"></td>
+                        <td><input type="text" style="height: 22px;width: 80px;"
+                                   class="layui-input layui-input-inline editinp b" value="{$v.price}" name="growth[]">
+                        </td>
+                    </tr>
+                    {/volist}
+                    {/notempty}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
 
-    <div class="layui-form-item">
-      <div class="layui-input-block">
-        <button class="layui-btn" lay-submit lay-filter="admin">立即提交</button>
-        <button type="reset" class="layui-btn layui-btn-primary">重置</button>
-      </div>
-    </div>
-  </form>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label required">商品描述</label>
+            <div class="layui-input-block" style="max-width:1000px;">
+                <textarea placeholder="请输入内容" class="layui-textarea" name="description" id="container"
+                          style="border:0;padding:0;height: 200px;"></textarea>
+            </div>
+        </div>
 
 
-  <script src="__PUBLIC__/layui/layui.js"></script>
-  <script src="__PUBLIC__/jquery/jquery.min.js"></script>
-
-  <!-- <script>
-      var message;
-      layui.config({
-          base: '__JS__/',
-          version: '1.0.1'
-      }).use(['app', 'message'], function() {
-          var app = layui.app,
-              $ = layui.jquery,
-              layer = layui.layer;
-          //将message设置为全局以便子页面调用
-          message = layui.message;
-          //主入口
-          app.set({
-              type: 'iframe'
-          }).init();
-      });
-  </script> -->
-
-  <script>//添加父类规格
-  $('.addspec').click(function () {
-      var edit_value = $('#edit_value').val();
-      var value = $('#specval').val();
-      $.ajax({
-          url: "{:url('admin/shopstreet/addspec')}",
-          data: {edit_value: edit_value,value:value},
-          success: function (res) {
-              if(res.code == 1){
-                  $('#ggz').append(res.msg);
-                  $('#edit_value').val(res.edit_value);
-              }else{
-                  layer.msg(res.msg);
-              }
-          }
-      })
-  })
-  </script>
-  <script>//删除父类规格
-  function delone(id) {
-      var edit_value = $('#edit_value').val();
-      $.ajax({
-          url: "{:url('admin/shopstreet/delspec')}",
-          data: {id: id,edit_value:edit_value},
-          success: function (res) {
-              $('#'+res.id).remove();
-              $('#table').html(res.table);
-              $('#edit_value').val(res.edit_value);
-          }
-      })
-  }
-  </script>
-  <script>//添加子类规格
-  function addspecson(id) {
-      var value = $('#'+id+'spectwo').val();
-      var edit_value = $('#edit_value').val();
-      $.ajax({
-          url: "{:url('admin/shopstreet/addspecson')}",
-          data: {edit_value: edit_value,value:value,id:id},
-          success: function (res) {
-              if(res.code == 1){
-                  $('#'+id+'son').append(res.msg);
-                  $('#table').html(res.table);
-                  $('#edit_value').val(res.edit_value);
-              }else{
-                  layer.msg(res.msg);
-              }
-          }
-      })
-  }
-  </script>
-  <script>//删除子类规格
-  function delspecson(id) {
-      var edit_value = $('#edit_value').val();
-      $.ajax({
-          url: "{:url('admin/shopstreet/delspecson')}",
-          data: {id: id,edit_value:edit_value},
-          success: function (res) {
-              $('#'+res.id).remove();
-              $('#table').html(res.table);
-              $('#edit_value').val(res.edit_value);
-          }
-      })
-  }
-  </script>
-  <script>
-      function setinventory() {
-          var value = $('#setinventory').val();
-          $('.a').val(value);
-      }
-      function setgrowth() {
-          var value = $('#setgrowth').val();
-          $('.b').val(value);
-      }
-  </script>
+        <input type="hidden" id="edit_value" name="edit_value" {notempty name="$goods.edit_value" }
+               value='{$goods.edit_value}' {/notempty}>
 
 
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="admin">立即提交</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+    </form>
 
-  <script>
-      layui.use('upload', function(){
-          var upload = layui.upload;
-          //执行实例
-          var uploadInst = upload.render({
-              elem: '#thumb' //绑定元素
-              ,url: "{:url('common/upload')}" //上传接口
-              ,data:{use:'goods_image'}
-              ,multiple: true
-              ,done: function(res){
-                  console.log(res);
-                  //上传完毕回调
-                  if(res.code == 2) {
-                      // $('#demo1').hide();
-                      if (!$('.image').val()){
-                          $('.image').val(res.src);
-                      }
-                      $('.upload-more').append('<div class="upload-preview" id="image'+res.id+'" style="display: inline-block;overflow: hidden;position: relative;width: 80px;height: 80px;margin: 5px 0;margin-right: 5px"><input type="hidden" name="images[]" value="'+ res.src +'"><img class="layui-upload-img" style="" width="80" height="80" src="'+ res.src +'"><span class="file-item-delete" onclick="del_image('+ res.id +')">×</span></div>');
 
-                  } else {
-                      layer.msg(res.msg);
-                  }
-              }
-              ,error: function(){
-                  //请求异常回调
-                  //演示失败状态，并实现重传
-                  var demoText = $('#demoText');
-                  demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
-                  demoText.find('.demo-reload').on('click', function(){
-                      uploadInst.upload();
-                  });
-              }
-          });
-      });
-  </script>
+    <script src="__PUBLIC__/layui/layui.js"></script>
+    <script src="__PUBLIC__/jquery/jquery.min.js"></script>
 
-  <script>
-      function del_image(e){
-          // alert('a');
-          // console.log(e);
-          var id = '#image'+e;
-          $(id).remove()
-      }
-  </script>
+    <!-- <script>
+        var message;
+        layui.config({
+            base: '__JS__/',
+            version: '1.0.1'
+        }).use(['app', 'message'], function() {
+            var app = layui.app,
+                $ = layui.jquery,
+                layer = layui.layer;
+            //将message设置为全局以便子页面调用
+            message = layui.message;
+            //主入口
+            app.set({
+                type: 'iframe'
+            }).init();
+        });
+    </script> -->
 
-  <script>
-      layui.use(['layer', 'form'], function() {
-          var layer = layui.layer,
-              $ = layui.jquery,
-              form = layui.form;
-          $(window).on('load', function() {
-              form.on('submit(admin)', function(data) {
-                  $.ajax({
-                      url:"{:url('admin/goods/save')}",
-                      data:$('#admin').serialize(),
-                      type:'post',
-                      async: false,
-                      success:function(res) {
-                          if(res.code == 1) {
-                              layer.alert(res.msg, function(index){
-                                  location.href = res.url;
-                              })
-                          } else {
-                              layer.msg(res.msg);
-                          }
-                      }
-                  })
-                  return false;
-              });
-          });
-      });
-  </script>
-  <!-- 加载编辑器的容器 -->
-  <script id="container" name="content" type="text/plain">
-        这里写你的初始化内容
+    <script>//添加父类规格
+    $('.addspec').click(function () {
+        var edit_value = $('#edit_value').val();
+        var value = $('#specval').val();
+        $.ajax({
+            url: "{:url('admin/shopstreet/addspec')}",
+            data: {edit_value: edit_value, value: value},
+            success: function (res) {
+                if (res.code == 1) {
+                    $('#ggz').append(res.msg);
+                    $('#edit_value').val(res.edit_value);
+                } else {
+                    layer.msg(res.msg);
+                }
+            }
+        })
+    })
     </script>
-  <!-- 配置文件 -->
-  <script type="text/javascript" src="__PUBLIC__/ueditor/ueditor.config.js"></script>
-  <!-- 编辑器源码文件 -->
-  <script type="text/javascript" src="__PUBLIC__/ueditor/ueditor.all.js"></script>
-  <!-- 实例化编辑器 -->
-  <script type="text/javascript">
-      var ue = UE.getEditor('container');
-  </script>
+    <script>//删除父类规格
+    function delone(id) {
+        var edit_value = $('#edit_value').val();
+        $.ajax({
+            url: "{:url('admin/shopstreet/delspec')}",
+            data: {id: id, edit_value: edit_value},
+            success: function (res) {
+                $('.')
+                $('#' + res.id).remove();
+                $('#table').html(res.table);
+                $('#edit_value').val(res.edit_value);
+            }
+        })
+    }
+    </script>
+    <script>//添加子类规格
+    function addspecson(id) {
+        var value = $('#' + id + 'spectwo').val();
+        var edit_value = $('#edit_value').val();
+        $.ajax({
+            url: "{:url('admin/shopstreet/addspecson')}",
+            data: {edit_value: edit_value, value: value, id: id},
+            success: function (res) {
+                if (res.code == 1) {
+                    $('#' + id + 'son').append(res.msg);
+                    $('#table').html(res.table);
+                    $('#edit_value').val(res.edit_value);
+                } else {
+                    layer.msg(res.msg);
+                }
+            }
+        })
+    }
+    </script>
+    <script>//删除子类规格
+    function delspecson(id) {
+        var edit_value = $('#edit_value').val();
+        $.ajax({
+            url: "{:url('admin/shopstreet/delspecson')}",
+            data: {id: id, edit_value: edit_value},
+            success: function (res) {
+                $
+                $('#' + res.id).remove();
+                $('#table').html(res.table);
+                $('#edit_value').val(res.edit_value);
+            }
+        })
+    }
+    </script>
+    <script>
+        function setinventory() {
+            var value = $('#setinventory').val();
+            $('.a').val(value);
+        }
+
+        function setgrowth() {
+            var value = $('#setgrowth').val();
+            $('.b').val(value);
+        }
+    </script>
+
+
+    <script>
+        layui.use('upload', function () {
+            var upload = layui.upload;
+            //执行实例
+            var uploadInst = upload.render({
+                elem: '#thumb' //绑定元素
+                , url: "{:url('common/upload')}" //上传接口
+                , data: {use: 'goods_image'}
+                , multiple: true
+                , done: function (res) {
+                    console.log(res);
+                    //上传完毕回调
+                    if (res.code == 2) {
+                        // $('#demo1').hide();
+                        if (!$('.image').val()) {
+                            $('.image').val(res.src);
+                        }
+                        $('.upload-more').append('<div class="upload-preview" id="image' + res.id + '" style="display: inline-block;overflow: hidden;position: relative;width: 80px;height: 80px;margin: 5px 0;margin-right: 5px"><input type="hidden" name="images[]" value="' + res.src + '"><img class="layui-upload-img" style="" width="80" height="80" src="' + res.src + '"><span class="file-item-delete" onclick="del_image(' + res.id + ')">×</span></div>');
+
+                    } else {
+                        layer.msg(res.msg);
+                    }
+                }
+                , error: function () {
+                    //请求异常回调
+                    //演示失败状态，并实现重传
+                    var demoText = $('#demoText');
+                    demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-mini demo-reload">重试</a>');
+                    demoText.find('.demo-reload').on('click', function () {
+                        uploadInst.upload();
+                    });
+                }
+            });
+        });
+    </script>
+
+    <script>
+        function del_image(e) {
+            // alert('a');
+            // console.log(e);
+            var id = '#image' + e;
+            $(id).remove()
+        }
+    </script>
+
+    <script>
+        layui.use(['layer', 'form'], function () {
+            var layer = layui.layer,
+                $ = layui.jquery,
+                form = layui.form;
+            $(window).on('load', function () {
+                form.on('submit(admin)', function (data) {
+                    $.ajax({
+                        url: "{:url('admin/goods/save')}",
+                        data: $('#admin').serialize(),
+                        type: 'post',
+                        async: false,
+                        success: function (res) {
+                            if (res.code == 1) {
+                                layer.alert(res.msg, function (index) {
+                                    location.href = res.url;
+                                })
+                            } else {
+                                layer.msg(res.msg);
+                            }
+                        }
+                    })
+                    return false;
+                });
+            });
+        });
+    </script>
+    <!-- 加载编辑器的容器 -->
+    <script id="container" name="content" type="text/plain">
+        这里写你的初始化内容
+
+    </script>
+    <!-- 配置文件 -->
+    <script type="text/javascript" src="__PUBLIC__/ueditor/ueditor.config.js"></script>
+    <!-- 编辑器源码文件 -->
+    <script type="text/javascript" src="__PUBLIC__/ueditor/ueditor.all.js"></script>
+    <!-- 实例化编辑器 -->
+    <script type="text/javascript">
+        var ue = UE.getEditor('container');
+    </script>
 
 </div>
 </body>

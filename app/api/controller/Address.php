@@ -131,16 +131,10 @@ class Address extends Base
 
             if ($is_default == 1) {
 //                $address->is_default = 1;
-                AddressModel::where('user_id', $this->user_id)->where('type', $request->param('type', 1))->update([
+                AddressModel::where('user_id', $this->user_id)->where('id','<>',$id)->where('type', $request->param('type', 1))->update([
                     'is_default' => 0
                 ]);
-            } else {
-                $res = AddressModel::where('user_id', $this->user_id)->where('type', $request->param('type', 1))->select();
-                if (!$res) {
-                    $address->is_default = 1;
-                }
             }
-
             $address->is_default = $is_default;
             $address->save();
             Db::commit();

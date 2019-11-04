@@ -109,4 +109,28 @@ class Base extends Controller
         }
         return $str;
     }
+
+
+    /**
+     * 去除emoji表情
+     */
+    public function filterEmoji($str)
+    {
+        $str = preg_replace_callback(
+            '/./u',
+            function (array $match) {
+                return strlen($match[0]) >= 4 ? '' : $match[0];
+            },
+            $str);
+
+        return $str;
+    }
+
+
+    /**
+     * 菜品价格计算
+     */
+    public function menus_price($price){
+        return $price + ($price * (GetConfig('menus_ratio',15)/100)) + GetConfig('box_price',1);
+    }
 }

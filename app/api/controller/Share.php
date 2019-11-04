@@ -5,6 +5,7 @@ namespace app\api\controller;
 use app\admin\model\Admin;
 use app\admin\model\Banner;
 use app\admin\model\MenusComment;
+use app\admin\model\Store;
 use app\admin\model\StoreCode;
 use app\admin\model\StoreOrder;
 use app\admin\model\Users;
@@ -55,15 +56,14 @@ class Share extends Base
                 'gender' => $user->gender,
                 'mobile' => $user->mobile,
                 'profession' => $user->profession,
-                'province' => $user->province,
-                'city' => $user->city,
-                'district' => $user->district,
+                'province' => $user->province?$user->province:'',
+                'city' => $user->city?$user->city:'',
+                'district' => $user->district?$user->district:'',
                 'signature' => $user->signature
             ]
         ];
         return JsonSuccess($data);
     }
-
 
     /**
      * 保存
@@ -210,7 +210,7 @@ class Share extends Base
             }
             $store_code = StoreCode::where('code',$code)->find();
             if (!$store_code){
-                return JsonError('激活码错误');
+                return JsonError('激活码`错误');
             }
             if ($store_code['status'] == 1){
                 return JsonError('激活码已被使用');
@@ -220,6 +220,8 @@ class Share extends Base
             }
             $store_code->status = 1;
             $user->is_enter = 1;
+            $user->store_id = 1;
+            $user->user_type = 1;
 
             if ($store_code->save() && $user->save()){
                 Db::commit();
@@ -287,13 +289,15 @@ class Share extends Base
             $avatar = GetConfig('img_prefix', 'http://www.le-live.com') . $user->avatar;
         }
 
-        if($user->is_partner == 1){
-            $label = '合伙人';
-        }elseif ($user->is_enter == 1){
-            $label = '个体商户';
-        }else{
+        $store = Store::where('id',$user->store_id)->where('type',$user->user_type)->find();
+        if (!$store){
             $label = '普通用户';
+        }else{
+            $label = $store->name;
         }
+
+        $store_first_num = Users::where('first_user_id',$this->user_id)->where('is_enter',1)->count();
+        $store_second_num = Users::where('second_user_id',$this->user_id)->where('is_enter',1)->count();
 
         $data = [
             'avatar' => $avatar,
@@ -303,8 +307,8 @@ class Share extends Base
             'store_total_num' => $user->store_total_num,
             'store_residue_num' => $user->store_residue_num,
             'store_use_num' => $user->store_use_num,
-            'store_first_num' => $user->store_first_num,
-            'store_second_num' => $user->store_second_num,
+            'store_first_num' => $store_first_num,
+            'store_second_num' => $store_second_num,
             'label' => $label,
             'is_partner' => $user->is_partner
         ];
@@ -328,6 +332,9 @@ class Share extends Base
         }
         $data = [
             'promote_qrcode' => GetConfig('img_prefix', 'http://www.le-live.com') . $user->promote_qrcode,
+            'title' => '合伙人扫码后成为合伙人,招募人获得以下奖励',
+            'first' => '1、直接招募获取价格的25%',
+            'second' => '2、间接招募获取价格的10%'
         ];
         return JsonSuccess($data);
     }
@@ -443,7 +450,6 @@ class Share extends Base
         return JsonSuccess($data);
     }
 
-
     /**
      * 提现提交
      */
@@ -527,7 +533,6 @@ class Share extends Base
         return JsonError('提交失败');
     }
 
-
     /**
      * 招募合伙人
      */
@@ -581,7 +586,6 @@ class Share extends Base
 
         return JsonSuccess($data);
     }
-
 
     /**
      * 代办营业执照

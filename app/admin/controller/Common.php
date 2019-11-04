@@ -49,7 +49,7 @@ class Common extends Controller
         }
         $module = $this->request->has('module') ? $this->request->param('module') : $module;//模块
         $web_config = Db::name('webconfig')->where('web','web')->find();
-        $info = $file->validate(['size'=>$web_config['file_size']*1024,'ext'=>$web_config['file_type']])->rule('date')->move(ROOT_PATH . 'public' . '/' . 'uploads' . '/' . $module . '/' . $use);
+        $info = $file->validate(['ext'=>$web_config['file_type']])->rule('date')->move(ROOT_PATH . 'public' . '/' . 'uploads' . '/' . $module . '/' . $use);
         if($info) {
             //写入到附件表
             $data = [];

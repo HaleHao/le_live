@@ -17,7 +17,7 @@ class BaseModel extends Model
 {
     public function prefixImgUrl($value)
     {
-        if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $value)) {
+        if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $value) && $value) {
             return GetConfig('img_prefix', 'http://www.le-live.com') . $value;
         }else{
             return $value;

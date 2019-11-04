@@ -79,15 +79,24 @@ class Mine extends Base
             $user['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $user['avatar'];
         }
 
-        if($user['province']){
-
-        }
-
-        if ($user['image']){
-            $user['show_image'] = GetConfig('img_prefix', 'http://www.le-live.com').$user['image'];
-        }else{
+        if ($user['image']) {
+            $user['show_image'] = GetConfig('img_prefix', 'http://www.le-live.com') . $user['image'];
+        } else {
             $user['show_image'] = '';
         }
+
+        if (!$user['province']) {
+            $user['province'] = '';
+        }
+
+        if (!$user['city']) {
+            $user['city'] = '';
+        }
+
+        if (!$user['district']) {
+            $user['district'] = '';
+        }
+
         $data = [
             'detail' => $user
         ];
@@ -827,38 +836,72 @@ class Mine extends Base
      */
     public function fan_list(Request $request)
     {
-        if (!$this->user_id) {
-            return JsonLogin();
-        }
 
-        $user = Users::where('id', $this->user_id)->find();
-        if (!$user) {
-            return JsonLogin();
-        }
-
+        $chef_id = $request->param('chef_id');
         $page = $request->param('page', 1);
-        $list = Db::name('users_follower')->alias('f')
-            ->join('users u', 'f.user_id=u.id', 'left')
-            ->join('users_follower f2', 'f2.user_id=' . $this->user_id . ' and f2.chef_id=f.user_id', 'left')
-            ->where('f.chef_id', $this->user_id)
-            ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter', 'f2.id as is_follower'])
-            ->order('f.create_time', 'desc')
-            ->page($page, 10)
-            ->select();
+        if ($chef_id) {
+            $list = Db::name('users_follower')->alias('f')
+                ->join('users u', 'f.user_id=u.id', 'left')
+                ->join('users_follower f2', 'f2.user_id=' . $chef_id . ' and f2.chef_id=f.user_id', 'left')
+                ->where('f.chef_id', $chef_id)
+                ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter', 'f2.id as is_follower'])
+                ->order('f.create_time', 'desc')
+                ->page($page, 10)
+                ->select();
+            foreach ($list as $key => $item) {
+                if ($item['id']) {
+                    if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
+                        $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+                    }
+                    $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
+                    $is_follower = 0;
+                    if ($item['is_follower']) {
+                        $is_follower = 1;
+                    }
+                    $list[$key]['is_follower'] = $is_follower;
+//                $arr[]['id'] = $item['id'];
+//                $arr[]['nickname'] = $item['nickname'];
+//                $arr[]['gender'] = $item['gender'];
+//                $arr[]['fan_num'] = $item['fan_num'];
+//                $arr[]['credit_line'] = $item['credit_line'];
+//                $arr[]['is_enter'] = $item['is_enter'];
+                }
+            }
+            $count = Db::name('users_follower')->where('chef_id', $chef_id)->count();
 
-        foreach ($list as $key => $item) {
-            if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
-                $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+        } else {
+            $page = $request->param('page', 1);
+            $list = Db::name('users_follower')->alias('f')
+                ->join('users u', 'f.user_id=u.id', 'left')
+                ->join('users_follower f2', 'f2.user_id=' . $this->user_id . ' and f2.chef_id=f.user_id', 'left')
+                ->where('f.chef_id', $this->user_id)
+                ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter', 'f2.id as is_follower'])
+                ->order('f.create_time', 'desc')
+                ->page($page, 10)
+                ->select();
+            foreach ($list as $key => $item) {
+                if ($item['id']) {
+                    if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
+                        $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+                    }
+                    $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
+                    $is_follower = 0;
+                    if ($item['is_follower']) {
+                        $is_follower = 1;
+                    }
+                    $list[$key]['is_follower'] = $is_follower;
+//                $arr[]['id'] = $item['id'];
+//                $arr[]['nickname'] = $item['nickname'];
+//                $arr[]['gender'] = $item['gender'];
+//                $arr[]['fan_num'] = $item['fan_num'];
+//                $arr[]['credit_line'] = $item['credit_line'];
+//                $arr[]['is_enter'] = $item['is_enter'];
+                }
             }
-            $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
-            $is_follower = 0;
-            if ($item['is_follower']) {
-                $is_follower = 1;
-            }
-            $list[$key]['is_follower'] = $is_follower;
+            $count = Db::name('users_follower')->where('chef_id', $this->user_id)->count();
         }
 
-        $count = Db::name('users_follower')->where('chef_id', $this->user_id)->count();
+
         $data = [
             'list' => $list,
             'count' => $count
@@ -873,32 +916,43 @@ class Mine extends Base
      */
     public function follower_list(Request $request)
     {
-        if (!$this->user_id) {
-            return JsonLogin();
-        }
-
-        $user = Users::where('id', $this->user_id)->find();
-        if (!$user) {
-            return JsonLogin();
-        }
-
+        $chef_id = $request->param('chef_id');
         $page = $request->param('page', 1);
-        $list = Db::name('users_follower')->alias('f')
-            ->join('users u', 'f.chef_id=u.id', 'left')
-            ->where('f.user_id', $this->user_id)
-            ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter'])
-            ->order('f.create_time', 'desc')
-            ->page($page, 10)
-            ->select();
 
-        foreach ($list as $key => $item) {
-            if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
-                $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+        if ($chef_id) {
+            $list = Db::name('users_follower')->alias('f')
+                ->join('users u', 'f.chef_id=u.id', 'left')
+                ->where('f.user_id',$chef_id)
+                ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter'])
+                ->order('f.create_time', 'desc')
+                ->page($page, 10)
+                ->select();
+
+            foreach ($list as $key => $item) {
+                if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
+                    $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+                }
+                $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
             }
-            $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
-        }
-        $count = Db::name('users_follower')->where('user_id', $this->user_id)->count();
+            $count = Db::name('users_follower')->where('user_id', $chef_id)->count();
+        } else {
 
+            $list = Db::name('users_follower')->alias('f')
+                ->join('users u', 'f.chef_id=u.id', 'left')
+                ->where('f.user_id', $this->user_id)
+                ->field(['u.id', 'u.nickname', 'u.gender', 'u.avatar', 'u.fan_num', 'u.credit_line', 'u.is_enter'])
+                ->order('f.create_time', 'desc')
+                ->page($page, 10)
+                ->select();
+
+            foreach ($list as $key => $item) {
+                if (!preg_match('/(http:\/\/)|(https:\/\/)/i', $item['avatar'])) {
+                    $list[$key]['avatar'] = GetConfig('img_prefix', 'http://www.le-live.com') . $item['avatar'];
+                }
+                $list[$key]['menu_num'] = Db::name('menus')->where('user_id', $item['id'])->count();
+            }
+            $count = Db::name('users_follower')->where('user_id', $this->user_id)->count();
+        }
         $data = [
             'list' => $list,
             'count' => $count
@@ -913,16 +967,16 @@ class Mine extends Base
      */
     public function red_poster()
     {
-        if (!$this->user_id){
+        if (!$this->user_id) {
             return JsonLogin();
         }
-        $user = Users::where('id',$this->user_id)->find();
-        if (!$user){
+        $user = Users::where('id', $this->user_id)->find();
+        if (!$user) {
             return JsonLogin();
         }
 
         return JsonSuccess([
-            'red_poster' =>  GetConfig('img_prefix', 'http://www.le-live.com').$user->red_poster,
+            'red_poster' => GetConfig('img_prefix', 'http://www.le-live.com') . $user->red_poster,
             'user_id' => $user->id,
         ]);
 

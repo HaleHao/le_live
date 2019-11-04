@@ -4,6 +4,8 @@ namespace app\api\service;
 
 
 use app\admin\model\MenusOrder;
+use app\api\tools\Coordinate;
+use app\api\tools\CoordinateTool;
 
 class UUDeliveryService
 {
@@ -41,6 +43,13 @@ class UUDeliveryService
 //        $send_address = Json_decode($order->send_address,true);
 //        $reci_address['detail'] = '天汇大厦B栋639';
 //        $send_address['detail'] = '万众步行街32号';
+
+        $coordinate = new Coordinate($reci_address['longitude'], $reci_address['latitude']); //吃货天堂的坐标
+        $reci_location = CoordinateTool::gcj_bd($coordinate);
+
+        $coordinate = new Coordinate($send_address['longitude'], $send_address['latitude']); //吃货天堂的坐标
+        $send_location = CoordinateTool::gcj_bd($coordinate);
+
         $data = [
             'origin_id' => $order->id,
             'from_address' => $reci_address['province'] . $reci_address['city'] . $reci_address['district'],
@@ -53,10 +62,10 @@ class UUDeliveryService
 //            'subscribe_time' => $reci_address['district'],
 //            'coupon_id' => '-1',
             'send_type' => 0,
-            'to_lat' => 22.643299,
-            'to_lng' => 114.046106,
-            'from_lat' => 22.638491,
-            'from_lng' => 114.039073,
+            'to_lat' => $reci_location->y,
+            'to_lng' => $reci_location->x,
+            'from_lat' => $send_location->y,
+            'from_lng' => $send_location->x,
             'nonce_str' => $order->order_no,
             'timestamp' => time(),
             'openid' => '9a88e9152c224c98aa737fa13cbbbc8a',
@@ -65,6 +74,65 @@ class UUDeliveryService
         ksort($data);
         $data['sign'] = $this->sign($data, $this->appKey);
 
+
+        $res = $this->request_post($url, $data);
+        $res = json_decode($res, true);
+        if ($res) {
+            return $res;
+        }
+        return false;
+    }
+
+    /**
+     * 获取订单价格
+     */
+    public function GetDeliveryPrice($reci_address,$send_address)
+    {
+        header("Content-type: text/html; charset=utf-8");
+
+        $guid = str_replace('-', '', $this->guid());
+// 远程地址
+        $url = "http://openapi.uupaotui.com/v2_0/getorderprice.ashx";
+// POST数据
+//        $data = array(
+//            'appid'       => $appid,
+//            'nonce_str'   => strtolower($guid),
+//            'timestamp'   => time(),
+//            'user_mobile' => '13700000000',
+//            'user_ip'     => '192.168.1.66'
+//        );
+
+//        $send_address = Json_decode($order->send_address,true);
+//        $reci_address['detail'] = '天汇大厦B栋639';
+//        $send_address['detail'] = '万众步行街32号';
+        $coordinate = new Coordinate($reci_address['longitude'], $reci_address['latitude']); //吃货天堂的坐标
+        $reci_location = CoordinateTool::gcj_bd($coordinate);
+
+        $coordinate = new Coordinate($send_address['longitude'], $send_address['latitude']); //吃货天堂的坐标
+        $send_location = CoordinateTool::gcj_bd($coordinate);
+        $data = [
+            'origin_id' => round(1,9999999999),
+            'from_address' => $reci_address['province'] . $reci_address['city'] . $reci_address['district'],
+            'from_usernote' => $reci_address['detail'],
+            'to_address' => $send_address['province'] . $send_address['city'] . $send_address['district'],
+            'to_usernote' => $send_address['detail'],
+            'city_name' => $reci_address['city'],
+//            'subscribe_type' => 0,
+//            'county_name' => $reci_address['district'],
+//            'subscribe_time' => $reci_address['district'],
+//            'coupon_id' => '-1',
+            'send_type' => 0,
+            'to_lat' => $reci_location->y,
+            'to_lng' => $reci_location->x,
+            'from_lat' => $send_location->y,
+            'from_lng' => $send_location->x,
+            'nonce_str' => GetOrderNo(),
+            'timestamp' => time(),
+            'openid' => '9a88e9152c224c98aa737fa13cbbbc8a',
+            'appid' =>  $this->appid,
+        ];
+        ksort($data);
+        $data['sign'] = $this->sign($data, $this->appKey);
 
         $res = $this->request_post($url, $data);
         $res = json_decode($res, true);
@@ -248,5 +316,7 @@ class UUDeliveryService
 //        echo "<br />";
         return strtoupper(md5($str));
     }
+
+
 
 }
